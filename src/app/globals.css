@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fdfbf7; /* Latar belakang coklat-krem sangat soft ala tradisional Dapoer Thatha */
+  --foreground: #291404; /* Coklat pekat espresso: Kontras maksimal (>11:1) untuk teks */
+  --card: #ffffff;
+  --card-foreground: #291404;
+  --border: #d6d3d1; /* Stone-300: Border tegas bernuansa hangat */
+  --primary: #78350f; /* Amber-900: Coklat kaya khas Dapoer Thatha */
+  --primary-foreground: #ffffff;
+  --primary-hover: #451a03; /* Coklat gelap espresso */
+  --accent: #d97706; /* Amber-600: Aksen kuning emas hangat */
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626; /* Red-600: Tombol Void / Batal dengan kontras tinggi */
+  --destructive-foreground: #ffffff;
+  --muted: #fefce8; /* Kuning-krem soft untuk highlight */
+  --muted-foreground: #57300a; /* Coklat medium pekat ber-kontras AA */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 16px; /* Senior-friendly base text size */
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Aksesibilitas: Ring Fokus Visual yang Jelas (Keyboard Navigation) */
+@layer base {
+  *:focus-visible {
+    outline: 3px solid #0284c7 !important; /* Sky-600 high contrast ring */
+    outline-offset: 2px !important;
+  }
+}
+
+/* Larangan Animasi Berlebihan & Dukungan prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Utilitas scrollbar bersih untuk panel kasir */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
