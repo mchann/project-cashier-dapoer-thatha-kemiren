@@ -16,7 +16,7 @@ export function ProductGrid({ products, onAddToCart }: ProductGridProps) {
       <div 
         role="status"
         aria-live="polite"
-        className="bg-white border-2 border-slate-300 rounded-xl p-8 text-center"
+        className="bg-[#FFFDF7] border-2 border-slate-300 rounded-xl p-8 text-center"
       >
         <p className="text-lg font-bold text-slate-700">
           Tidak ada menu yang sesuai dengan kategori ini.

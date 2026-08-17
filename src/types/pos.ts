@@ -12,7 +12,7 @@ export interface Product {
   description?: string;
   price: number;
   stock: number; // Porsi matang siap jual
-  image: string;
+  image?: string;
   categoryId: string;
   category?: {
     _id: string;

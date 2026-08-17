@@ -10,6 +10,8 @@ import {
   DUMMY_FAKTUR_GANTUNG,
 } from '@/lib/dummy-pos-data';
 import { POSHeader } from '@/components/pos/POSHeader';
+import { POSSidebar } from '@/components/pos/POSSidebar';
+import { PrinterSettingsModal } from '@/components/pos/PrinterSettingsModal';
 import { CategoryTabs } from '@/components/pos/CategoryTabs';
 import { ProductGrid } from '@/components/pos/ProductGrid';
 import { OrderCart } from '@/components/pos/OrderCart';
@@ -17,8 +19,9 @@ import { FakturGantungModal } from '@/components/pos/FakturGantungModal';
 import { VoidPinModal } from '@/components/pos/VoidPinModal';
 
 export default function POSPage() {
-  // --- State Filter Kategori ---
+  // --- State Filter Kategori & Pencarian ---
   const [activeCategorySlug, setActiveCategorySlug] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   // --- State Keranjang Pesanan ---
   const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in');
@@ -35,9 +38,13 @@ export default function POSPage() {
   const [guideCommission, setGuideCommission] = useState<number>(0);
 
   // --- State Modals ---
-  const [isFakturModalOpen, setIsFakturModalOpen] = useState<boolean>(false);
+  const [isFakturModalOpen, setIsFakturModalOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isPrinterModalOpen, setIsPrinterModalOpen] = useState(false);
   const [isVoidModalOpen, setIsVoidModalOpen] = useState<boolean>(false);
-  const [fakturOrders, setFakturOrders] = useState<Order[]>(DUMMY_FAKTUR_GANTUNG);
+
+  // Derivasi data pesanan (Aktif)
+  const fakturOrders = useMemo(() => DUMMY_FAKTUR_GANTUNG.filter((o) => o.paymentStatus !== 'paid'), []);
 
   // --- State Notifikasi Aksi Kasir (A11y Alert) ---
   const [notifMessage, setNotifMessage] = useState<string>('');
@@ -49,15 +56,24 @@ export default function POSPage() {
     }, 4000);
   }, []);
 
-  // --- Filter Produk berdasarkan Kategori ---
+  // --- Filter Produk berdasarkan Kategori & Pencarian ---
   const filteredProducts = useMemo(() => {
-    if (activeCategorySlug === 'all') {
-      return DUMMY_PRODUCTS;
+    let result = DUMMY_PRODUCTS;
+    
+    if (activeCategorySlug !== 'all') {
+      const cat = DUMMY_CATEGORIES.find((c) => c.slug === activeCategorySlug);
+      if (cat) {
+        result = result.filter((p) => p.categoryId === cat._id);
+      }
     }
-    const cat = DUMMY_CATEGORIES.find((c) => c.slug === activeCategorySlug);
-    if (!cat) return DUMMY_PRODUCTS;
-    return DUMMY_PRODUCTS.filter((p) => p.categoryId === cat._id);
-  }, [activeCategorySlug]);
+    
+    if (searchTerm.trim() !== '') {
+      const lowerQuery = searchTerm.toLowerCase();
+      result = result.filter((p) => p.name.toLowerCase().includes(lowerQuery));
+    }
+    
+    return result;
+  }, [activeCategorySlug, searchTerm]);
 
   // --- Handler Tambah Menu ke Keranjang ---
   const handleAddToCart = useCallback((product: Product) => {
@@ -173,7 +189,7 @@ export default function POSPage() {
       isSmartMerged: false,
     };
 
-    setFakturOrders((prev) => [newOrder, ...prev]);
+    // setFakturOrders((prev) => [newOrder, ...prev]);
     showNotification(
       `Pesanan Meja ${tableNumber || '00'} berhasil disimpan ke antrean Faktur Gantung (${newInvoice}).`
     );
@@ -197,11 +213,6 @@ export default function POSPage() {
     if (cartItems.length === 0) return;
     const subtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
     const grandTotal = Math.max(0, subtotal - dpAmount - guideCommission);
-
-    // Hapus dari daftar faktur gantung jika meja yang sama sudah ada di antrean
-    setFakturOrders((prev) =>
-      prev.filter((o) => o.tableNumber !== tableNumber)
-    );
 
     showNotification(
       `PEMBAYARAN LUNAS BERHASIL! Meja ${tableNumber || '-'}. Total dibayar: Rp ${grandTotal.toLocaleString('id-ID')}`
@@ -238,12 +249,20 @@ export default function POSPage() {
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-[#fdfbf7]">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#FFFDF7]">
+      {/* Sidebar Navigation */}
+      <POSSidebar 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)} 
+        onOpenPrinter={() => setIsPrinterModalOpen(true)}
+      />
+
       {/* 1. Header POS Kasir */}
       <POSHeader
         cashierName="Siti (Kasir 01)"
         shiftName="Shift Pagi (08:00 - 16:00)"
         openOrdersCount={fakturOrders.length}
+        onOpenSidebar={() => setIsSidebarOpen(true)}
         onOpenFakturGantung={() => setIsFakturModalOpen(true)}
       />
 
@@ -266,9 +285,24 @@ export default function POSPage() {
       )}
 
       {/* 3. Area Utama Kasir (Katalog Menu Kiri & Keranjang Kanan) */}
-      <div className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-y-auto">
+      <div className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden min-h-0">
         {/* Kolom Kiri: Katalog Menu & Kategori (Span 7 / 8) */}
-        <section className="lg:col-span-7 xl:col-span-8 flex flex-col gap-5">
+        <section className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6 overflow-y-auto pb-4 custom-scrollbar">
+          
+          {/* Search Bar */}
+          <div className="relative w-full">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6F4E37]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input 
+              type="text" 
+              placeholder="Cari Menu..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-[#FFFDF7] border-2 border-[#DCC7AA]/40 text-[#4B3832] pl-12 pr-12 py-3.5 rounded-[2rem] font-medium outline-none focus:border-[#DCC7AA] focus:shadow-sm transition-all"
+            />
+            {/* Command Icon placeholder on the right */}
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6F4E37]/40 text-xs font-bold border border-[#DCC7AA]/40 px-2 py-1 rounded-lg">⌘K</div>
+          </div>
+
           <CategoryTabs
             categories={DUMMY_CATEGORIES}
             activeCategorySlug={activeCategorySlug}
@@ -282,7 +316,7 @@ export default function POSPage() {
         </section>
 
         {/* Kolom Kanan: Panel Keranjang Pesanan (Span 5 / 4) */}
-        <section className="lg:col-span-5 xl:col-span-4 h-full">
+        <section className="lg:col-span-5 xl:col-span-4 h-full overflow-hidden">
           <OrderCart
             orderType={orderType}
             tableNumber={tableNumber}
@@ -298,7 +332,6 @@ export default function POSPage() {
             onUpdateTableNumber={setTableNumber}
             onUpdateCustomerName={setCustomerName}
             onUpdateQuantity={handleUpdateQuantity}
-            onRemoveItem={handleRemoveItem}
             onChangePaymentMode={setPaymentMode}
             onTogglePartner={setIsPartnerOrder}
             onSelectPartner={(id, name) => {
@@ -328,6 +361,12 @@ export default function POSPage() {
         tableNumber={tableNumber}
         onClose={() => setIsVoidModalOpen(false)}
         onConfirmVoid={handleConfirmVoid}
+      />
+
+      {/* Printer Settings Modal */}
+      <PrinterSettingsModal
+        isOpen={isPrinterModalOpen}
+        onClose={() => setIsPrinterModalOpen(false)}
       />
     </div>
   );

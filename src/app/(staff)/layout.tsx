@@ -13,7 +13,7 @@ export default function StaffLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-[100dvh] bg-slate-50 flex flex-col antialiased">
+    <div className="min-h-[100dvh] bg-[#fafaf9] flex flex-col antialiased" suppressHydrationWarning>
       <main className="flex-1 flex flex-col overflow-hidden">
         {children}
       </main>

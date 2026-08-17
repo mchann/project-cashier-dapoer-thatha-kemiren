@@ -43,48 +43,52 @@ export function FakturGantungModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="faktur-gantung-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#4B3832]/60 backdrop-blur-sm p-4 md:p-6"
     >
-      <div className="bg-white rounded-2xl border-4 border-slate-400 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-[#FFFDF7] rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-[#DCC7AA]">
+        
         {/* Header Modal */}
-        <div className="bg-[#451a03] text-white px-6 py-4 border-b-2 border-[#d97706] flex items-center justify-between">
+        <div className="bg-[#4B3832] px-6 py-5 flex items-center justify-between">
           <div>
-            <h2 id="faktur-gantung-title" className="text-2xl font-black text-[#fefce8]">
-              ANTREAN FAKTUR GANTUNG
+            <h2 id="faktur-gantung-title" className="text-xl font-black text-[#FFFDF7] tracking-wide">
+              Antrean Faktur Gantung
             </h2>
-            <p className="text-sm text-[#fde68a]">
-              Pilih nomor meja pelanggan yang ingin memproses pelunasan
+            <p className="text-xs text-[#DCC7AA] mt-1 font-medium">
+              Pilih meja / pelanggan yang ingin melakukan pelunasan
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-[#78350f] hover:bg-[#451a03] text-white font-bold rounded-lg border border-[#f59e0b] cursor-pointer transition-colors"
+            className="w-10 h-10 flex items-center justify-center bg-transparent hover:bg-[#FFFDF7]/20 text-[#FFFDF7] rounded-full transition-colors"
+            title="Tutup Modal"
           >
-            Tutup [Esc]
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        {/* Input Cari */}
-        <div className="p-4 bg-[#fefce8] border-b-2 border-[#d6d3d1]">
-          <label htmlFor="search-faktur" className="block text-sm font-extrabold text-[#451a03] mb-1">
-            Cari Nomor Meja, Nama Tamu, atau No. Struk:
-          </label>
-          <input
-            id="search-faktur"
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Ketik No. Meja (contoh: 07) atau Nama..."
-            className="w-full bg-white border-2 border-[#a8a29e] rounded-xl px-4 py-3 font-bold text-lg text-[#291404] focus:border-[#d97706]"
-          />
+        {/* Search Bar */}
+        <div className="p-6 pb-2">
+          <div className="relative">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6F4E37]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input
+              id="search-faktur"
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari No. Meja, Nama Tamu, atau Struk..."
+              className="w-full bg-transparent border border-[#DCC7AA] rounded-full pl-11 pr-4 py-3 font-bold text-sm text-[#4B3832] focus:border-[#4B3832] outline-none transition-all"
+            />
+          </div>
         </div>
 
         {/* Daftar Faktur Gantung */}
-        <div className="p-4 flex-1 overflow-y-auto custom-scrollbar space-y-4">
+        <div className="p-6 pt-4 flex-1 overflow-y-auto custom-scrollbar space-y-4 min-h-0">
           {filteredOrders.length === 0 ? (
-            <div className="py-16 text-center text-slate-500 font-bold text-lg">
-              Tidak ditemukan faktur gantung yang aktif.
+            <div className="py-16 flex flex-col items-center justify-center text-center text-[#8B7355]">
+               <svg className="w-16 h-16 mb-4 opacity-30" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              <p className="font-bold text-base">Tidak ada antrean faktur gantung.</p>
+              <p className="text-xs mt-1">Coba sesuaikan kata kunci pencarian Anda.</p>
             </div>
           ) : (
             filteredOrders.map((order) => {
@@ -92,61 +96,61 @@ export function FakturGantungModal({
               return (
                 <div
                   key={order._id}
-                  className="bg-white border-2 border-[#d6d3d1] rounded-xl p-4 shadow-sm hover:border-[#78350f] hover:bg-[#fffbeb] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  className="bg-[#FFFDF7] border border-[#DCC7AA]/70 rounded-2xl p-5 hover:border-[#4B3832]/50 hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-5 group"
                 >
-                  {/* Info Kiri: Meja & Pelanggan */}
-                  <div className="space-y-1.5 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="bg-[#78350f] text-white px-3 py-1 rounded-lg font-black text-lg border border-[#451a03]">
+                  {/* Info Kiri */}
+                  <div className="space-y-2.5 flex-1">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="bg-[#4B3832] text-[#FFFDF7] px-3.5 py-1.5 rounded-lg font-black text-sm">
                         Meja {order.tableNumber || 'TA'}
                       </span>
-                      <span className="font-extrabold text-lg text-[#291404]">
+                      <span className="font-extrabold text-lg text-[#4B3832] tracking-tight">
                         {order.customerName}
                       </span>
-                      <span className="text-xs font-bold text-[#57300a] uppercase px-2 py-0.5 bg-[#fefce8] rounded border border-[#d6d3d1]">
+                      <span className="text-[10px] font-bold text-[#6F4E37] uppercase tracking-wider px-2.5 py-1 bg-[#F5E6CA] rounded-md">
                         {order.orderType === 'qr_order'
                           ? 'QR Mandiri'
                           : order.orderType === 'reservation'
                           ? 'Reservasi Online'
-                          : 'Dine-In Kasir'}
+                          : 'Kasir'}
                       </span>
                       {order.paymentStatus === 'dp_paid' && (
-                        <span className="bg-[#fefce8] text-[#78350f] font-extrabold text-xs px-2 py-0.5 rounded border border-[#d97706]">
-                          DP 50% Dibayar ({formatRupiah(order.dpAmount)})
+                        <span className="bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-md border border-emerald-200">
+                          DP {formatRupiah(order.dpAmount)}
                         </span>
                       )}
                     </div>
 
-                    {/* Indikator SMART MERGE */}
                     {order.isSmartMerged && (
-                      <div className="inline-flex items-center gap-1.5 bg-[#fef08a] text-[#713f12] font-black text-xs px-3 py-1 rounded-lg border-2 border-[#facc15]">
-                        <span>⚡ SMART MERGE: 2 pesanan QR digabung jadi 1 tagihan</span>
+                      <div className="inline-flex items-center gap-1.5 bg-[#fefce8] text-[#ca8a04] font-bold text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-md border border-[#fef08a]">
+                        <span>⚡ SMART MERGE: Ada Penambahan Pesanan</span>
                       </div>
                     )}
 
-                    <p className="text-sm text-[#57300a]">
-                      <strong>No. Struk:</strong> {order.invoiceNumber} •{' '}
-                      <strong>Jumlah Menu:</strong> {totalQty} item •{' '}
-                      <strong>Waktu:</strong> {order.createdAt}
-                    </p>
+                    <div className="flex items-center gap-4 text-xs font-medium text-[#8B7355]">
+                      <span><strong className="text-[#6F4E37]">Struk:</strong> {order.invoiceNumber}</span>
+                      <span><strong className="text-[#6F4E37]">Item:</strong> {totalQty}</span>
+                      <span><strong className="text-[#6F4E37]">Waktu:</strong> {order.createdAt}</span>
+                    </div>
                   </div>
 
-                  {/* Kanan: Harga & Tombol Pilih */}
-                  <div className="flex md:flex-col items-center md:items-end justify-between gap-2 border-t md:border-t-0 pt-3 md:pt-0 border-[#e7e5e4]">
+                  {/* Kanan: Harga & Tombol */}
+                  <div className="flex md:flex-col items-center md:items-end justify-between gap-3 border-t md:border-t-0 pt-4 md:pt-0 border-[#DCC7AA]/30 shrink-0">
                     <div className="text-right">
-                      <span className="block text-xs font-extrabold text-[#57300a]">
-                        TOTAL TAGIHAN:
+                      <span className="block text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-0.5">
+                        Total Tagihan
                       </span>
-                      <span className="text-2xl font-black text-[#78350f]">
+                      <span className="text-xl font-black text-[#4B3832]">
                         {formatRupiah(order.grandTotal)}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => onSelectOrder(order)}
-                      className="bg-[#78350f] hover:bg-[#451a03] text-white font-extrabold px-5 py-2.5 rounded-xl border-2 border-[#d97706] shadow-sm cursor-pointer transition-colors"
+                      className="bg-[#4B3832] hover:bg-[#6F4E37] text-[#FFFDF7] font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-full shadow-sm transition-transform active:scale-[0.98] flex items-center gap-2"
                     >
-                      Pilih & Pelunasan →
+                      Pilih & Lunas
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                     </button>
                   </div>
                 </div>

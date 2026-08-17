@@ -1,7 +1,7 @@
 // src/components/pos/OrderCart.tsx
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { OrderItem, Partner } from '@/types/pos';
 import { TravelPartnerSelector } from './TravelPartnerSelector';
 
@@ -20,7 +20,6 @@ interface OrderCartProps {
   onUpdateTableNumber: (val: string) => void;
   onUpdateCustomerName: (val: string) => void;
   onUpdateQuantity: (productId: string, delta: number) => void;
-  onRemoveItem: (productId: string) => void;
   onChangePaymentMode: (mode: 'pay_now' | 'save_faktur') => void;
   onTogglePartner: (checked: boolean) => void;
   onSelectPartner: (partnerId: string, partnerName: string) => void;
@@ -46,7 +45,6 @@ export function OrderCart({
   onUpdateTableNumber,
   onUpdateCustomerName,
   onUpdateQuantity,
-  onRemoveItem,
   onChangePaymentMode,
   onTogglePartner,
   onSelectPartner,
@@ -56,6 +54,8 @@ export function OrderCart({
   onOpenVoidModal,
   onClearCart,
 }: OrderCartProps) {
+  const [isTravelModalOpen, setIsTravelModalOpen] = useState(false);
+
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const grandTotal = Math.max(0, subtotal - dpAmount - guideCommission);
 
@@ -70,259 +70,286 @@ export function OrderCart({
   return (
     <aside 
       aria-label="Keranjang Pesanan Kasir" 
-      className="bg-[#fffbeb] border-4 border-[#d6d3d1] rounded-2xl shadow-xl flex flex-col h-full overflow-hidden"
+      className="bg-[#FFFDF7] border border-[#DCC7AA] rounded-3xl shadow-sm flex flex-col h-full overflow-hidden"
     >
-      {/* Header Panel Keranjang - Tema Coklat Espresso & Kuning Emas Soft */}
-      <div className="bg-[#451a03] text-white px-5 py-4 border-b-2 border-[#d97706] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#fcd34d] inline-block" />
-          <h2 className="text-xl font-black tracking-wide text-[#fefce8]">
-            KERANJANG PESANAN
-          </h2>
-        </div>
-        {items.length > 0 && (
-          <button
-            type="button"
-            onClick={onClearCart}
-            className="text-xs font-bold text-[#fde047] hover:text-white px-2.5 py-1 rounded bg-[#78350f] border border-[#d97706] cursor-pointer transition-colors"
-          >
-            Kosongkan
-          </button>
-        )}
-      </div>
+      {/* 1. Header & Options (FIXED) */}
+      <div className="shrink-0 flex flex-col gap-4 px-6 pt-6 pb-2">
+        {/* Title & Clear */}
+        <div className="flex items-center justify-between relative">
+          <div className="flex-1 text-center">
+            <h2 className="text-lg font-black tracking-tight text-[#4B3832]">
+              Nota Pesanan
+            </h2>
+            <p className="text-xs font-bold text-[#6F4E37]">#27362</p>
+          </div>
+          {/* Tombol Options / Clear */}
+          <div className="absolute right-0 flex items-center gap-2">
+            {/* Tombol Mitra Travel / Guide */}
+            <button
+              type="button"
+              onClick={() => setIsTravelModalOpen(true)}
+              className={`w-9 h-9 flex items-center justify-center rounded-full border border-[#DCC7AA] transition-colors shadow-sm ${
+                (selectedPartnerId.trim() !== '' || guideCommission > 0) ? 'bg-[#4B3832] text-[#FFFDF7]' : 'bg-[#FFFDF7] text-[#6F4E37] hover:bg-[#F5E6CA]'
+              }`}
+              title="Mitra Agen / Tour Guide"
+            >
+              {/* Ikon Bendera Tour */}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path></svg>
+            </button>
 
-      <div className="p-4 space-y-4 flex-1 overflow-y-auto custom-scrollbar">
-        {/* Pilihan Tipe Pesanan (Dine-In vs Takeaway/Bungkus) */}
-        <div className="bg-[#fefce8] p-2 rounded-xl border-2 border-[#e7e5e4] flex items-center gap-2">
+            {/* Tombol Kosongkan Keranjang */}
+            {items.length > 0 && (
+              <button
+                type="button"
+                onClick={onClearCart}
+                className="w-9 h-9 flex items-center justify-center rounded-full border border-[#DCC7AA] text-[#ef4444] bg-[#FFFDF7] hover:bg-[#F5E6CA] transition-colors shadow-sm"
+                title="Kosongkan Keranjang"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Dine-In vs Takeaway */}
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => onChangeOrderType('dine_in')}
-            className={`flex-1 py-2 px-3 rounded-lg font-extrabold text-sm border-2 cursor-pointer transition-colors ${
+            className={`flex-1 py-2 px-3 rounded-full font-bold text-xs transition-all duration-300 ${
               orderType === 'dine_in'
-                ? 'bg-[#78350f] text-white border-[#451a03] shadow-sm'
-                : 'bg-white text-[#57300a] border-[#d6d3d1] hover:bg-[#fef9c3]'
+                ? 'bg-[#4B3832] text-[#FFFDF7] shadow-sm'
+                : 'bg-transparent text-[#6F4E37] border border-[#DCC7AA] hover:bg-[#F5E6CA]'
             }`}
           >
-            🍽️ Dine-In (Meja)
+            Makan di Tempat
           </button>
           <button
             type="button"
             onClick={() => onChangeOrderType('takeaway')}
-            className={`flex-1 py-2 px-3 rounded-lg font-extrabold text-sm border-2 cursor-pointer transition-colors ${
+            className={`flex-1 py-2 px-3 rounded-full font-bold text-xs transition-all duration-300 ${
               orderType === 'takeaway'
-                ? 'bg-[#b45309] text-white border-[#78350f] shadow-sm'
-                : 'bg-white text-[#57300a] border-[#d6d3d1] hover:bg-[#fef9c3]'
+                ? 'bg-[#4B3832] text-[#FFFDF7] shadow-sm'
+                : 'bg-transparent text-[#6F4E37] border border-[#DCC7AA] hover:bg-[#F5E6CA]'
             }`}
           >
-            🛍️ Takeaway (Bungkus)
+            Bawa Pulang
           </button>
         </div>
 
-        {/* Input Nomor Meja & Nama Pelanggan (Kontras Tinggi) */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* Input Nomor Meja & Nama Pelanggan */}
+        <div className="grid grid-cols-2 gap-3">
           <div className="col-span-1">
-            <label 
-              htmlFor="table-number" 
-              className="block text-sm font-extrabold text-[#451a03] mb-1"
-            >
-              No. Meja
-            </label>
+            <label htmlFor="customer-name" className="block text-[10px] font-bold text-[#6F4E37] mb-1">Nama Pelanggan</label>
+            <input
+              id="customer-name"
+              type="text"
+              value={customerName}
+              onChange={(e) => onUpdateCustomerName(e.target.value)}
+              placeholder={orderType === 'takeaway' ? 'Bungkus' : 'Nama Tamu'}
+              className="w-full bg-transparent border border-[#DCC7AA] focus:border-[#4B3832] rounded-xl px-3 py-2 font-bold text-xs text-[#4B3832] outline-none transition-all"
+            />
+          </div>
+          <div className="col-span-1">
+            <label htmlFor="table-number" className="block text-[10px] font-bold text-[#6F4E37] mb-1">Nomor Meja</label>
             <input
               id="table-number"
               type="text"
               disabled={orderType === 'takeaway'}
               value={orderType === 'takeaway' ? 'TA' : tableNumber}
               onChange={(e) => onUpdateTableNumber(e.target.value)}
-              placeholder="Opsional"
-              title="Nomor meja opsional. Untuk Takeaway otomatis bernilai TA / Bungkus."
-              className={`w-full border-2 rounded-lg px-3 py-2 font-black text-xl text-center ${
-                orderType === 'takeaway'
-                  ? 'bg-[#fef3c7] border-[#d6d3d1] text-[#78350f] cursor-not-allowed'
-                  : 'bg-white border-[#a8a29e] text-[#291404] focus:border-[#d97706]'
+              placeholder="00"
+              className={`w-full bg-transparent border border-[#DCC7AA] focus:border-[#4B3832] rounded-xl px-3 py-2 font-bold text-xs text-[#4B3832] outline-none transition-all ${
+                orderType === 'takeaway' ? 'opacity-50 cursor-not-allowed' : ''
               }`}
-            />
-          </div>
-          <div className="col-span-2">
-            <label 
-              htmlFor="customer-name" 
-              className="block text-sm font-extrabold text-[#451a03] mb-1"
-            >
-              Nama Pelanggan / Tamu
-            </label>
-            <input
-              id="customer-name"
-              type="text"
-              value={customerName}
-              onChange={(e) => onUpdateCustomerName(e.target.value)}
-              placeholder={orderType === 'takeaway' ? 'Contoh: Ibu Rina (Bungkus)' : 'Contoh: Pak Budi (Opsional)'}
-              className="w-full bg-white border-2 border-[#a8a29e] rounded-lg px-3 py-2 font-bold text-base text-[#291404] focus:border-[#d97706]"
             />
           </div>
         </div>
 
-        {/* Daftar Item Pesanan - Kuning Krim Soft dengan Kartu Putih */}
-        <div className="border-2 border-[#d6d3d1] rounded-xl p-3 bg-[#fefce8] min-h-[180px] max-h-[300px] overflow-y-auto custom-scrollbar">
-          {items.length === 0 ? (
-            <div className="h-40 flex flex-col items-center justify-center text-center text-[#78350f]">
-              <p className="font-bold text-base">Belum ada pesanan.</p>
-              <p className="text-xs mt-1 text-[#92400e]">Klik menu di sebelah kiri untuk menambah.</p>
-            </div>
-          ) : (
-            <ul className="space-y-3">
-              {items.map((item) => (
-                <li
-                  key={item.productId}
-                  className="bg-white border-2 border-[#e7e5e4] rounded-lg p-3 flex items-center justify-between gap-3 shadow-sm"
-                >
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-extrabold text-base text-[#291404] truncate">
+        <h3 className="text-sm font-bold text-[#6F4E37] mt-2 border-b border-[#DCC7AA]/30 pb-2">Daftar Pesanan</h3>
+      </div>
+
+      {/* 2. Daftar Item Pesanan (SCROLLABLE AREA) */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-6 min-h-0">
+        {items.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center text-[#8B7355]">
+            <p className="font-bold text-sm">Keranjang masih kosong.</p>
+          </div>
+        ) : (
+          <ul className="space-y-3 pb-4">
+            {items.map((item) => (
+              <li
+                key={item.productId}
+                className="bg-[#FFFDF7] border border-[#DCC7AA]/50 rounded-2xl p-3 flex flex-col gap-2 transition-colors shadow-sm"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-bold text-xs text-[#4B3832] leading-tight pr-2">
                       {item.name}
                     </h4>
-                    <p className="text-sm font-bold text-[#78350f]">
+                    <p className="text-[10px] font-bold text-[#6F4E37] mt-0.5">
                       {formatRupiah(item.price)}
                     </p>
                   </div>
+                  <p className="font-bold text-sm text-[#4B3832] shrink-0">
+                    {formatRupiah(item.price * item.quantity)}
+                  </p>
+                </div>
 
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#6F4E37] bg-[#F5E6CA] px-2 py-0.5 rounded-md font-bold">Reguler</span>
+                  
                   {/* Kontrol Kuantitas */}
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2 bg-[#F5E6CA]/50 border border-[#DCC7AA]/50 px-2 py-1 rounded-full">
                     <button
                       type="button"
                       onClick={() => onUpdateQuantity(item.productId, -1)}
-                      aria-label={`Kurangi 1 ${item.name}`}
-                      className="w-8 h-8 rounded-lg bg-[#fef3c7] hover:bg-[#fde68a] text-[#451a03] font-black text-lg flex items-center justify-center border border-[#d97706] cursor-pointer transition-colors"
+                      className="text-[#4B3832] font-black w-4 flex justify-center"
                     >
                       -
                     </button>
-                    <span className="w-8 text-center font-black text-lg text-[#291404]">
+                    <span className="w-3 text-center font-bold text-xs text-[#4B3832]">
                       {item.quantity}
                     </span>
                     <button
                       type="button"
                       onClick={() => onUpdateQuantity(item.productId, 1)}
-                      aria-label={`Tambah 1 ${item.name}`}
-                      className="w-8 h-8 rounded-lg bg-[#fef3c7] hover:bg-[#fde68a] text-[#451a03] font-black text-lg flex items-center justify-center border border-[#d97706] cursor-pointer transition-colors"
+                      className="text-[#4B3832] font-black w-4 flex justify-center"
                     >
                       +
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => onRemoveItem(item.productId)}
-                      aria-label={`Hapus ${item.name} dari keranjang`}
-                      className="ml-1 px-2 py-1 text-xs font-bold text-red-700 hover:bg-red-50 rounded border border-red-300 cursor-pointer"
-                    >
-                      Hapus
-                    </button>
                   </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Mitra Agen Travel / Tour Guide */}
-        <TravelPartnerSelector
-          partners={partners}
-          isPartnerOrder={isPartnerOrder}
-          selectedPartnerId={selectedPartnerId}
-          guideCommission={guideCommission}
-          onTogglePartner={onTogglePartner}
-          onSelectPartner={onSelectPartner}
-          onChangeCommission={onChangeCommission}
-        />
-
-        {/* Pemilihan Tipe Pembayaran (Bayar Awal vs Bayar Akhir) */}
-        <div className="bg-[#fefce8] p-3 rounded-xl border-2 border-[#e7e5e4]">
-          <p className="text-sm font-extrabold text-[#451a03] mb-2">
-            Metode Pembayaran:
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => onChangePaymentMode('pay_now')}
-              className={`py-2.5 px-3 rounded-lg font-bold text-sm border-2 cursor-pointer transition-colors ${
-                paymentMode === 'pay_now'
-                  ? 'bg-[#78350f] text-white border-[#451a03] shadow-sm'
-                  : 'bg-white text-[#57300a] border-[#d6d3d1] hover:bg-[#fef9c3]'
-              }`}
-            >
-              Bayar Awal (Lunas)
-            </button>
-            <button
-              type="button"
-              onClick={() => onChangePaymentMode('save_faktur')}
-              className={`py-2.5 px-3 rounded-lg font-bold text-sm border-2 cursor-pointer transition-colors ${
-                paymentMode === 'save_faktur'
-                  ? 'bg-[#d97706] text-white border-[#92400e] shadow-sm'
-                  : 'bg-white text-[#57300a] border-[#d6d3d1] hover:bg-[#fef9c3]'
-              }`}
-            >
-              Bayar Akhir (Faktur Gantung)
-            </button>
-          </div>
-        </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
-      {/* Footer Perhitungan Total & Tombol Aksi Kasir - Coklat Espresso dengan Aksen Kuning Emas */}
-      <div className="p-4 bg-[#451a03] text-white border-t-4 border-[#78350f] space-y-3">
-        {/* Rincian Kalkulasi */}
-        <div className="space-y-1.5 text-sm">
-          <div className="flex justify-between text-[#fefce8] font-bold">
-            <span>Subtotal:</span>
-            <span>{formatRupiah(subtotal)}</span>
-          </div>
-          {dpAmount > 0 && (
-            <div className="flex justify-between text-[#fde047] font-extrabold">
-              <span>DP Reservasi Dibayar:</span>
-              <span>- {formatRupiah(dpAmount)}</span>
+      {/* 3. Footer Kalkulasi & CTA (FIXED) */}
+      <div className="shrink-0 bg-[#FFFDF7] border-t border-[#DCC7AA]/30 px-6 pt-4 pb-6 space-y-4">
+        
+        {/* Compact Payment Mode selection */}
+        <div className="grid grid-cols-2 gap-3">
+           <button
+            type="button"
+            onClick={() => onChangePaymentMode('pay_now')}
+            className={`py-2 px-2 rounded-xl font-bold text-[10px] uppercase transition-all duration-300 border ${
+              paymentMode === 'pay_now'
+                ? 'bg-[#4B3832] text-[#FFFDF7] border-[#4B3832] shadow-sm'
+                : 'bg-transparent text-[#6F4E37] border-[#DCC7AA] hover:bg-[#F5E6CA]'
+            }`}
+          >
+            Lunas / Tunai
+          </button>
+          <button
+            type="button"
+            onClick={() => onChangePaymentMode('save_faktur')}
+            className={`py-2 px-2 rounded-xl font-bold text-[10px] uppercase transition-all duration-300 border ${
+              paymentMode === 'save_faktur'
+                ? 'bg-[#4B3832] text-[#FFFDF7] border-[#4B3832] shadow-sm'
+                : 'bg-transparent text-[#6F4E37] border-[#DCC7AA] hover:bg-[#F5E6CA]'
+            }`}
+          >
+            Faktur Gantung
+          </button>
+        </div>
+
+        {/* Payment Details */}
+        <div>
+          <h3 className="text-xs font-bold text-[#4B3832] mb-1">Rincian Tagihan</h3>
+          <div className="space-y-1 text-xs">
+            <div className="flex justify-between text-[#6F4E37]">
+              <span>Subtotal</span>
+              <span className="font-bold text-[#4B3832]">{formatRupiah(subtotal)}</span>
             </div>
-          )}
-          {guideCommission > 0 && (
-            <div className="flex justify-between text-[#fcd34d] font-extrabold">
-              <span>Komisi Guide (Tunai):</span>
-              <span>- {formatRupiah(guideCommission)}</span>
+            <div className="flex justify-between text-[#6F4E37]">
+              <span>Pajak (0%)</span>
+              <span className="font-bold text-[#4B3832]">Rp 0</span>
             </div>
-          )}
-          <div className="pt-2 border-t border-[#78350f] flex justify-between items-center">
-            <span className="text-base font-bold text-[#fefce8]">GRAND TOTAL:</span>
-            <span className="text-2xl font-black text-[#fcd34d]">
-              {formatRupiah(grandTotal)}
-            </span>
+            {dpAmount > 0 && (
+              <div className="flex justify-between text-[#22c55e]">
+                <span>DP Dibayar</span>
+                <span className="font-bold">- {formatRupiah(dpAmount)}</span>
+              </div>
+            )}
+            {guideCommission > 0 && (
+              <div className="flex justify-between text-[#ef4444]">
+                <span>Komisi Guide</span>
+                <span className="font-bold">- {formatRupiah(guideCommission)}</span>
+              </div>
+            )}
+            <div className="pt-2 border-t border-[#DCC7AA]/30 flex justify-between items-center mt-1">
+              <span className="text-sm font-bold text-[#6F4E37]">Total</span>
+              <span className="text-lg font-black text-[#4B3832]">
+                {formatRupiah(grandTotal)}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Tombol CTA Utama (Kontras Tinggi & Tinggi Minimal 48px) */}
-        <div className="grid grid-cols-1 gap-2 pt-1">
-          {paymentMode === 'save_faktur' ? (
-            <button
-              type="button"
-              disabled={items.length === 0}
-              onClick={onSaveFakturGantung}
-              className="w-full min-h-[52px] bg-[#d97706] hover:bg-[#b45309] disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-lg py-3 rounded-xl border-2 border-[#fcd34d] shadow-md cursor-pointer transition-colors"
-            >
-              SIMPAN KE FAKTUR GANTUNG
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={items.length === 0}
-              onClick={onPayNow}
-              className="w-full min-h-[52px] bg-[#78350f] hover:bg-[#451a03] disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-lg py-3 rounded-xl border-2 border-[#fcd34d] shadow-md cursor-pointer transition-colors"
-            >
-              BAYAR LUNAS ({formatRupiah(grandTotal)})
-            </button>
-          )}
-
-          {/* Tombol Otorisasi Keamanan VOID / BATAL */}
+        {/* Tombol CTA Utama */}
+        <div className="mt-2">
           <button
             type="button"
-            disabled={items.length === 0 && !tableNumber}
-            onClick={onOpenVoidModal}
-            className="w-full bg-[#991b1b] hover:bg-[#7f1d1d] disabled:opacity-40 text-white font-extrabold text-sm py-2.5 rounded-lg border-2 border-[#f87171] cursor-pointer transition-colors"
+            disabled={items.length === 0}
+            onClick={paymentMode === 'pay_now' ? onPayNow : onSaveFakturGantung}
+            className="w-full flex items-center justify-between bg-[#4B3832] hover:bg-[#6F4E37] disabled:bg-[#DCC7AA] disabled:cursor-not-allowed text-[#FFFDF7] font-bold py-3.5 px-5 rounded-full shadow-lg transition-all active:scale-[0.98]"
           >
-            VOID / BATAL PESANAN (PIN OWNER)
+            <span className="bg-[#FFFDF7] text-[#4B3832] w-7 h-7 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+            </span>
+            <span className="flex-1 text-center text-xs uppercase tracking-widest">
+              {paymentMode === 'pay_now' ? 'Proses Pesanan' : 'Simpan Faktur'}
+            </span>
+            <span className="text-xs">
+              {formatRupiah(grandTotal)}
+            </span>
+          </button>
+        </div>
+
+        <div className="text-center pt-1">
+          <button
+            type="button"
+            onClick={onOpenVoidModal}
+            className="text-[10px] font-bold text-[#ef4444] hover:underline uppercase tracking-wide"
+          >
+            Void / Batal Transaksi
           </button>
         </div>
       </div>
+
+      {/* Modal Travel Partner */}
+      {isTravelModalOpen && (
+        <div className="absolute inset-0 z-50 bg-[#FFFDF7]/60 backdrop-blur-sm flex flex-col items-center justify-center p-6">
+          <div className="bg-[#FFFDF7] border border-[#DCC7AA] shadow-xl rounded-3xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="bg-[#4B3832] px-5 py-4 flex justify-between items-center">
+              <h3 className="text-[#FFFDF7] font-bold text-sm tracking-wide">Pengaturan Tour Guide</h3>
+              <button onClick={() => setIsTravelModalOpen(false)} className="text-[#FFFDF7]/70 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-5">
+              <TravelPartnerSelector
+                partners={partners}
+                isPartnerOrder={isPartnerOrder}
+                selectedPartnerId={selectedPartnerId}
+                guideCommission={guideCommission}
+                onTogglePartner={onTogglePartner}
+                onSelectPartner={onSelectPartner}
+                onChangeCommission={onChangeCommission}
+              />
+              <button 
+                type="button"
+                onClick={() => setIsTravelModalOpen(false)}
+                className="w-full mt-6 bg-[#4B3832] hover:bg-[#6F4E37] text-[#FFFDF7] font-bold py-3 rounded-xl transition-colors"
+              >
+                Simpan & Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
