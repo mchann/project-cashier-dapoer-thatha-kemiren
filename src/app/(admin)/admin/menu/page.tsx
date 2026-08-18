@@ -226,7 +226,7 @@ export default function AdminMenuPage() {
   });
 
   return (
-    <div className="relative p-4 md:p-8 max-w-[1600px] mx-auto space-y-8">
+    <div className="relative p-4 md:p-8 space-y-8">
       
       {/* Notifikasi Toast Mengambang */}
       {notifMessage && (
@@ -269,18 +269,9 @@ export default function AdminMenuPage() {
           </button>
         </div>
 
-        {/* Tombol CTA */}
+        {/* Tombol CTA (Hanya untuk Kategori di sini) */}
         <div>
-          {activeTab === 'products' ? (
-            <button
-              type="button"
-              onClick={handleOpenAddProduct}
-              className="w-full md:w-auto inline-flex items-center justify-center gap-2 bg-[#6F4E37] hover:bg-[#4B3832] text-[#FFFDF7] font-bold text-sm px-6 py-3 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all border border-[#4B3832]"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
-              <span>Tambah Menu Baru</span>
-            </button>
-          ) : (
+          {activeTab === 'categories' && (
             <button
               type="button"
               onClick={handleOpenAddCategory}
@@ -299,44 +290,45 @@ export default function AdminMenuPage() {
       {activeTab === 'products' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
-          {/* Filter & Pencarian (Floating Bar) */}
-          <div className="bg-[#FFFDF7] p-4 rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-[#DCC7AA] flex flex-col xl:flex-row items-center justify-between gap-4">
-            
-            {/* Filter Pills */}
-            <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
-              <span className="font-semibold text-xs text-[#6F4E37] uppercase tracking-widest mr-2 hidden sm:block">Filter:</span>
-              <button
-                type="button"
-                onClick={() => setSelectedCategoryFilter('all')}
-                className={`px-5 py-2 rounded-full font-bold text-xs transition-all border ${
-                  selectedCategoryFilter === 'all'
-                    ? 'bg-[#4B3832] text-[#FFFDF7] border-[#4B3832] shadow-sm'
-                    : 'bg-[#FFFDF7] text-[#6F4E37] border-[#DCC7AA] hover:border-[#6F4E37]'
-                }`}
-              >
-                Semua ({products.length})
-              </button>
-              {categories.map((cat) => {
-                const count = products.filter((p) => p.categoryId === cat._id).length;
-                return (
-                  <button
-                    key={cat._id}
-                    type="button"
-                    onClick={() => setSelectedCategoryFilter(cat._id)}
-                    className={`px-5 py-2 rounded-full font-bold text-xs transition-all border ${
-                      selectedCategoryFilter === cat._id
-                        ? 'bg-[#4B3832] text-[#FFFDF7] border-[#4B3832] shadow-sm'
-                        : 'bg-[#FFFDF7] text-[#6F4E37] border-[#DCC7AA] hover:border-[#6F4E37]'
-                    }`}
-                  >
-                    {cat.name} ({count})
-                  </button>
-                );
-              })}
-            </div>
+          {/* Stat Cards Filter Kategori */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <button
+              type="button"
+              onClick={() => setSelectedCategoryFilter('all')}
+              className={`p-5 rounded-3xl text-left transition-all border shadow-sm flex flex-col justify-between group ${
+                selectedCategoryFilter === 'all'
+                  ? 'bg-[#4B3832] border-[#4B3832]'
+                  : 'bg-[#FFFDF7] border-[#DCC7AA]/60 hover:border-[#6F4E37]'
+              }`}
+            >
+              <span className={`font-bold text-sm mb-2 ${selectedCategoryFilter === 'all' ? 'text-[#FFFDF7]' : 'text-[#6F4E37]'}`}>Semua Menu</span>
+              <span className={`text-3xl font-black ${selectedCategoryFilter === 'all' ? 'text-[#FFFDF7]' : 'text-[#4B3832]'}`}>{products.length}</span>
+            </button>
 
-            {/* Kotak Cari (Modern) */}
-            <div className="w-full xl:w-80 relative group">
+            {categories.slice(0, 3).map((cat) => {
+              const count = products.filter((p) => p.categoryId === cat._id).length;
+              const isActive = selectedCategoryFilter === cat._id;
+              return (
+                <button
+                  key={cat._id}
+                  type="button"
+                  onClick={() => setSelectedCategoryFilter(cat._id)}
+                  className={`p-5 rounded-3xl text-left transition-all border shadow-sm flex flex-col justify-between group ${
+                    isActive
+                      ? 'bg-[#4B3832] border-[#4B3832]'
+                      : 'bg-[#FFFDF7] border-[#DCC7AA]/60 hover:border-[#6F4E37]'
+                  }`}
+                >
+                  <span className={`font-bold text-sm mb-2 ${isActive ? 'text-[#FFFDF7]' : 'text-[#6F4E37]'}`}>{cat.name}</span>
+                  <span className={`text-3xl font-black ${isActive ? 'text-[#FFFDF7]' : 'text-[#4B3832]'}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Toolbar Tabel (Pencarian & Tambah Menu) */}
+          <div className="bg-[#FFFDF7] p-4 rounded-t-3xl border border-[#DCC7AA] border-b-0 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="w-full md:w-80 relative group">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#DCC7AA] group-focus-within:text-[#6F4E37] transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
               </span>
@@ -345,13 +337,22 @@ export default function AdminMenuPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari nama menu..."
-                className="w-full bg-[#FFFDF7] hover:bg-[#F5E6CA] border border-[#DCC7AA] focus:border-[#6F4E37] focus:bg-[#FFFDF7] rounded-full pl-12 pr-4 py-2.5 font-semibold text-sm text-[#4B3832] outline-none transition-all shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]"
+                className="w-full bg-[#FFFDF7] border border-[#DCC7AA] focus:border-[#6F4E37] focus:ring-1 focus:ring-[#6F4E37] rounded-full pl-12 pr-4 py-2.5 font-semibold text-sm text-[#4B3832] outline-none transition-all shadow-inner"
               />
             </div>
+            
+            <button
+              type="button"
+              onClick={handleOpenAddProduct}
+              className="w-full md:w-auto inline-flex items-center justify-center gap-2 bg-[#6F4E37] hover:bg-[#4B3832] text-[#FFFDF7] font-bold text-sm px-6 py-2.5 rounded-full shadow-sm hover:shadow-md transition-colors border border-[#4B3832]"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+              <span>Tambah Menu</span>
+            </button>
           </div>
 
           {/* Tabel / Daftar Produk */}
-          <div className="bg-[#FFFDF7] rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-[#DCC7AA] overflow-hidden">
+          <div className="bg-[#FFFDF7] rounded-b-3xl shadow-sm border border-[#DCC7AA] overflow-hidden -mt-6">
             <ProductTable
               products={filteredProducts}
               onEditProduct={handleOpenEditProduct}

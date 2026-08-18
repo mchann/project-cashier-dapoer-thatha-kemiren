@@ -5,6 +5,7 @@ import React from 'react';
 
 interface POSHeaderProps {
   cashierName?: string;
+  shiftName?: string;
   openOrdersCount?: number;
   totalOrders?: number;
   totalRevenue?: number;
@@ -14,6 +15,7 @@ interface POSHeaderProps {
 
 export function POSHeader({
   cashierName = 'Siti (Kasir 01)',
+  shiftName = 'Shift Pagi (08:00 - 16:00)',
   openOrdersCount = 3,
   totalOrders = 20,
   totalRevenue = 2500000,

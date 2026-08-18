@@ -16,7 +16,7 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: DashboardIcon },
     { name: 'Kelola Menu', href: '/admin/menu', icon: MenuIcon },
-    { name: 'Karyawan', href: '/admin/users', icon: UsersIcon },
+    { name: 'Kelola Staff', href: '/admin/staff', icon: UsersIcon },
     { name: 'Laporan', href: '/admin/report', icon: ReportIcon },
     { name: 'Pengaturan', href: '/admin/settings', icon: SettingsIcon },
   ];

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Product, OrderItem, Order } from '@/types/pos';
+import { Product, OrderItem, Order, Category } from '@/types/pos';
 import {
   DUMMY_CATEGORIES,
   DUMMY_PRODUCTS,
@@ -17,6 +17,7 @@ import { ProductGrid } from '@/components/pos/ProductGrid';
 import { OrderCart } from '@/components/pos/OrderCart';
 import { FakturGantungModal } from '@/components/pos/FakturGantungModal';
 import { VoidPinModal } from '@/components/pos/VoidPinModal';
+import { PaymentModal } from '@/components/pos/PaymentModal';
 
 export default function POSPage() {
   // --- State Filter Kategori & Pencarian ---
@@ -42,6 +43,7 @@ export default function POSPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPrinterModalOpen, setIsPrinterModalOpen] = useState(false);
   const [isVoidModalOpen, setIsVoidModalOpen] = useState<boolean>(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   // Derivasi data pesanan (Aktif)
   const fakturOrders = useMemo(() => DUMMY_FAKTUR_GANTUNG.filter((o) => o.paymentStatus !== 'paid'), []);
@@ -56,12 +58,57 @@ export default function POSPage() {
     }, 4000);
   }, []);
 
+  // --- Data dari Database ---
+  const [categories, setCategories] = useState<Category[]>(DUMMY_CATEGORIES);
+  const [products, setProducts] = useState<Product[]>(DUMMY_PRODUCTS);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const resCat = await fetch('/api/admin/categories');
+      if (resCat.ok) {
+        const dataCat = await resCat.json();
+        // Tambahkan "Semua Menu" di paling depan
+        setCategories([
+          { _id: 'cat-all', name: 'Semua Menu', slug: 'all' },
+          ...dataCat
+        ]);
+      }
+      const resProd = await fetch('/api/admin/products');
+      if (resProd.ok) {
+        const dataProd = await resProd.json();
+        // Mongoose populate menggantikan categoryId dengan object, kita normalkan:
+        const formattedProd = dataProd.map((p: any) => ({
+          ...p,
+          categoryId: p.categoryId?._id || p.categoryId,
+          category: p.categoryId?._id ? p.categoryId : undefined
+        }));
+        setProducts(formattedProd.filter((p: any) => p.isAvailable !== false));
+      }
+    } catch (err) {
+      console.error('Failed to fetch data', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+    // --- Hitung Jumlah Menu per Kategori ---
+  const menuCounts = useMemo(() => {
+    const counts: Record<string, number> = { 'cat-all': products.length };
+    products.forEach((p) => {
+      const catId = typeof p.categoryId === 'object' ? p.categoryId._id : p.categoryId;
+      counts[catId] = (counts[catId] || 0) + 1;
+    });
+    return counts;
+  }, [products]);
+
   // --- Filter Produk berdasarkan Kategori & Pencarian ---
   const filteredProducts = useMemo(() => {
-    let result = DUMMY_PRODUCTS;
+    let result = products;
     
     if (activeCategorySlug !== 'all') {
-      const cat = DUMMY_CATEGORIES.find((c) => c.slug === activeCategorySlug);
+      const cat = categories.find((c) => c.slug === activeCategorySlug);
       if (cat) {
         result = result.filter((p) => p.categoryId === cat._id);
       }
@@ -73,7 +120,7 @@ export default function POSPage() {
     }
     
     return result;
-  }, [activeCategorySlug, searchTerm]);
+  }, [activeCategorySlug, searchTerm, products, categories]);
 
   // --- Handler Tambah Menu ke Keranjang ---
   const handleAddToCart = useCallback((product: Product) => {
@@ -209,16 +256,52 @@ export default function POSPage() {
   ]);
 
   // --- Handler Bayar Lunas ---
-  const handlePayNow = useCallback(() => {
+  const handleConfirmPayment = useCallback(async (amountReceived: number, change: number) => {
     if (cartItems.length === 0) return;
     const subtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
     const grandTotal = Math.max(0, subtotal - dpAmount - guideCommission);
 
-    showNotification(
-      `PEMBAYARAN LUNAS BERHASIL! Meja ${tableNumber || '-'}. Total dibayar: Rp ${grandTotal.toLocaleString('id-ID')}`
-    );
-    handleClearCart();
-  }, [cartItems, dpAmount, guideCommission, tableNumber, handleClearCart, showNotification]);
+    try {
+      const res = await fetch('/api/pos/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoiceNumber: `INV-${Date.now()}`,
+          tableNumber: orderType === 'takeaway' ? 'TA' : (tableNumber || '00'),
+          customerName: customerName || (orderType === 'takeaway' ? 'Bungkus' : 'Dine In'),
+          orderType,
+          paymentStatus: 'paid',
+          items: cartItems,
+          subtotal,
+          dpAmount,
+          guideCommission,
+          grandTotal,
+          amountReceived,
+          changeAmount: change
+        })
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Gagal memproses transaksi');
+      }
+
+      setIsPaymentModalOpen(false);
+      
+      let notif = `PEMBAYARAN LUNAS BERHASIL! Meja ${tableNumber || '-'}. Total dibayar: Rp ${grandTotal.toLocaleString('id-ID')}.`;
+      if (change > 0) {
+        notif += ` Kembalian: Rp ${change.toLocaleString('id-ID')}.`;
+      }
+      
+      showNotification(notif);
+      handleClearCart();
+      fetchData(); // Refresh stok dari database
+      
+    } catch (err: any) {
+      alert(err.message);
+    }
+  }, [cartItems, dpAmount, guideCommission, tableNumber, orderType, customerName, handleClearCart, showNotification, fetchData]);
 
   // --- Handler Verifikasi PIN Void ---
   const handleConfirmVoid = useCallback(
@@ -242,6 +325,7 @@ export default function POSPage() {
       } else if (e.key === 'Escape') {
         setIsFakturModalOpen(false);
         setIsVoidModalOpen(false);
+        setIsPaymentModalOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -271,13 +355,16 @@ export default function POSPage() {
         <div
           role="alert"
           aria-live="assertive"
-          className="bg-[#78350f] text-[#fefce8] font-extrabold px-6 py-3 border-b-4 border-[#d97706] shadow-md flex items-center justify-between"
+          className="bg-emerald-600 text-white font-extrabold px-6 py-3 border-b-4 border-emerald-800 shadow-md flex items-center justify-between z-10"
         >
-          <span>✓ {notifMessage}</span>
+          <span className="flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
+            {notifMessage}
+          </span>
           <button
             type="button"
             onClick={() => setNotifMessage('')}
-            className="text-xs uppercase px-2 py-1 bg-[#451a03] rounded border border-[#d97706] cursor-pointer"
+            className="text-xs font-black uppercase px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 rounded-lg border border-emerald-700 cursor-pointer transition-colors"
           >
             Tutup
           </button>
@@ -340,7 +427,7 @@ export default function POSPage() {
             }}
             onChangeCommission={setGuideCommission}
             onSaveFakturGantung={handleSaveFakturGantung}
-            onPayNow={handlePayNow}
+            onPayNow={() => setIsPaymentModalOpen(true)}
             onOpenVoidModal={() => setIsVoidModalOpen(true)}
             onClearCart={handleClearCart}
           />
@@ -367,6 +454,14 @@ export default function POSPage() {
       <PrinterSettingsModal
         isOpen={isPrinterModalOpen}
         onClose={() => setIsPrinterModalOpen(false)}
+      />
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        grandTotal={Math.max(0, cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0) - dpAmount - guideCommission)}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onConfirmPayment={handleConfirmPayment}
       />
     </div>
   );

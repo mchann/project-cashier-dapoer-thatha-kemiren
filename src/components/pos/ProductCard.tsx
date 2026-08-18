@@ -38,9 +38,16 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           {product.name}
         </h3>
         
-        <span className="font-extrabold text-[#6F4E37] text-xs">
-          {formatRupiah(product.price)}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="font-extrabold text-[#6F4E37] text-xs">
+            {formatRupiah(product.price)}
+          </span>
+          {!isOutOfStock && (
+            <span className="text-[10px] font-bold text-[#8B7355] bg-[#F5E6CA]/50 px-1.5 py-0.5 rounded">
+              Stok: {product.stock}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Decorative circle icon background for abstract look */}

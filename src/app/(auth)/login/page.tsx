@@ -3,9 +3,43 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const res = await signIn('credentials', {
+        username,
+        password,
+        redirect: false,
+      });
+
+      if (res?.error) {
+        setError(res.error);
+      } else {
+        // Redirect ke admin atau pos berdasarkan role? 
+        // Sementara kita arahkan ke dashboard admin.
+        router.push('/admin');
+        router.refresh();
+      }
+    } catch (err) {
+      setError('Terjadi kesalahan saat login.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Toggle Theme Function
   const toggleTheme = () => {
@@ -65,17 +99,25 @@ export default function LoginPage() {
             }`}>Silakan masukkan detail Anda untuk login.</p>
           </div>
 
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-6" onSubmit={handleLogin}>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 text-sm font-medium px-4 py-3 rounded-lg text-center">
+                {error}
+              </div>
+            )}
+
             {/* Email Field */}
             <div>
               <label className={`block text-sm font-semibold mb-2 ${
                 isDarkMode ? 'text-[#e5d3b3]/90' : 'text-[#4B3832]'
               }`}>
-                Alamat Email
+                Username
               </label>
               <input
-                type="email"
-                placeholder="Masukkan email Anda"
+                type="text"
+                placeholder="Masukkan username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className={`w-full px-4 py-3 rounded-lg border transition-colors outline-none text-sm ${
                   isDarkMode 
                     ? 'bg-[#18181b] border-[#e5d3b3]/20 focus:border-[#e5d3b3] text-[#e5d3b3] placeholder-[#e5d3b3]/30' 
@@ -97,6 +139,8 @@ export default function LoginPage() {
               <input
                 type="password"
                 placeholder="Masukkan kata sandi"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className={`w-full px-4 py-3 rounded-lg border transition-colors outline-none text-sm ${
                   isDarkMode 
                     ? 'bg-[#18181b] border-[#e5d3b3]/20 focus:border-[#e5d3b3] text-[#e5d3b3] placeholder-[#e5d3b3]/30' 
@@ -109,13 +153,17 @@ export default function LoginPage() {
             {/* Login Button */}
             <button
               type="submit"
-              className={`w-full font-bold py-3.5 rounded-lg shadow-lg hover:shadow-xl transition-all active:scale-[0.98] text-sm tracking-wide mt-4 ${
+              disabled={isLoading}
+              className={`w-full font-bold py-3.5 rounded-lg shadow-lg hover:shadow-xl transition-all active:scale-[0.98] text-sm tracking-wide mt-4 disabled:opacity-50 flex items-center justify-center gap-2 ${
                 isDarkMode 
                   ? 'bg-[#e5d3b3] hover:bg-white text-[#111111]' 
                   : 'bg-[#4B3832] hover:bg-[#6F4E37] text-[#FFFDF7]'
               }`}
             >
-              Masuk
+              {isLoading && (
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+              )}
+              {isLoading ? 'Memproses...' : 'Masuk'}
             </button>
           </form>
           

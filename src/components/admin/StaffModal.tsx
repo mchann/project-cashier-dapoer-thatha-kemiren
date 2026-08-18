@@ -1,22 +1,29 @@
-// src/components/admin/CategoryModal.tsx
 'use client';
 
 import React, { useState } from 'react';
-import { Category } from '@/types/pos';
 
-interface CategoryModalProps {
-  isOpen: boolean;
-  initialData?: Category | null;
-  onClose: () => void;
-  onSave: (categoryData: { _id?: string; name: string; slug: string }) => void;
+export interface StaffData {
+  _id?: string;
+  name: string;
+  username: string;
+  isActive: boolean;
+  role?: string;
+  password?: string;
 }
 
-export function CategoryModal({
+interface StaffModalProps {
+  isOpen: boolean;
+  initialData?: StaffData | null;
+  onClose: () => void;
+  onSave: (data: StaffData) => void;
+}
+
+export function StaffModal({
   isOpen,
   initialData,
   onClose,
   onSave,
-}: CategoryModalProps) {
+}: StaffModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -25,8 +32,8 @@ export function CategoryModal({
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
     >
-      <CategoryForm
-        key={initialData?._id || 'new-category'}
+      <StaffForm
+        key={initialData?._id || 'new-staff'}
         initialData={initialData}
         onClose={onClose}
         onSave={onSave}
@@ -35,38 +42,31 @@ export function CategoryModal({
   );
 }
 
-function CategoryForm({ initialData, onClose, onSave }: Omit<CategoryModalProps, 'isOpen'>) {
-  const [name, setName] = useState(initialData?.name || '');
-  const [slug, setSlug] = useState(initialData?.slug || '');
+function StaffForm({ initialData, onClose, onSave }: Omit<StaffModalProps, 'isOpen'>) {
+    const [username, setUsername] = useState(initialData?.username || '');
+  const [password, setPassword] = useState('');
+  const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
   const [errorMsg, setErrorMsg] = useState('');
-
-  const handleNameChange = (val: string) => {
-    setName(val);
-    if (!initialData) {
-      const generatedSlug = val
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-');
-      setSlug(generatedSlug);
-    }
-    if (errorMsg) setErrorMsg('');
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      setErrorMsg('Nama kategori tidak boleh kosong.');
+        if (!username.trim()) {
+      setErrorMsg('Username tidak boleh kosong.');
       return;
     }
-    if (!slug.trim()) {
-      setErrorMsg('Slug kategori tidak boleh kosong.');
+    
+    // Jika menambah staff baru, password wajib diisi
+    if (!initialData && !password.trim()) {
+      setErrorMsg('Password wajib diisi untuk staff baru.');
       return;
     }
+
     onSave({
       _id: initialData?._id,
-      name: name.trim(),
-      slug: slug.trim(),
+      name: username.trim().toLowerCase(),
+      username: username.trim().toLowerCase(),
+      password: password.trim() !== '' ? password : undefined,
+      isActive,
     });
   };
 
@@ -74,8 +74,8 @@ function CategoryForm({ initialData, onClose, onSave }: Omit<CategoryModalProps,
     <div className="bg-[#FFFDF7] rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[95vh] flex flex-col my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
       {/* Header Modal */}
       <div className="px-8 pt-8 pb-4 flex items-center justify-between shrink-0">
-        <h2 id="category-modal-title" className="text-2xl font-bold text-[#4B3832]">
-          {initialData ? 'Edit Kategori' : 'Tambah Kategori Baru'}
+        <h2 id="staff-modal-title" className="text-2xl font-bold text-[#4B3832]">
+          {initialData ? 'Edit Profil Staff' : 'Tambah Staff Baru'}
         </h2>
         <button
           type="button"
@@ -88,39 +88,54 @@ function CategoryForm({ initialData, onClose, onSave }: Omit<CategoryModalProps,
 
       {/* Form Container */}
       <div className="px-8 pb-8 overflow-y-auto flex-1 custom-scrollbar">
-        <form id="category-form" onSubmit={handleSubmit} className="border border-[#DCC7AA]/70 rounded-[2rem] p-8 space-y-6">
+        <form id="staff-form" onSubmit={handleSubmit} className="border border-[#DCC7AA]/70 rounded-[2rem] p-8 space-y-6">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+          <div className="grid grid-cols-1 gap-y-6">
             <div>
-              <label htmlFor="cat-name-input" className="block text-sm font-medium text-[#6F4E37] mb-2">
-                Nama Kategori
+              <label htmlFor="staff-username" className="block text-sm font-medium text-[#6F4E37] mb-2">
+                Username (Untuk Login)
               </label>
               <input
-                id="cat-name-input"
+                id="staff-username"
                 type="text"
-                value={name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="Contoh: Minuman Segar"
-                autoFocus
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value.replace(/\\s+/g, '').toLowerCase());
+                  if (errorMsg) setErrorMsg('');
+                }}
+                placeholder="contoh: siti"
                 className="w-full bg-transparent border border-[#DCC7AA] rounded-2xl px-4 py-3 text-sm font-semibold text-[#4B3832] focus:border-[#6F4E37] focus:ring-1 focus:ring-[#6F4E37] outline-none transition-all placeholder:text-[#DCC7AA]"
               />
             </div>
 
             <div>
-              <label htmlFor="cat-slug-input" className="block text-sm font-medium text-[#6F4E37] mb-2">
-                Slug (ID URL)
+              <label htmlFor="staff-password" className="block text-sm font-medium text-[#6F4E37] mb-2">
+                {initialData ? 'Kata Sandi Baru (Kosongkan jika tidak ingin diubah)' : 'Kata Sandi Awal'}
               </label>
               <input
-                id="cat-slug-input"
-                type="text"
-                value={slug}
+                id="staff-password"
+                type="password"
+                value={password}
                 onChange={(e) => {
-                  setSlug(e.target.value);
+                  setPassword(e.target.value);
                   if (errorMsg) setErrorMsg('');
                 }}
-                placeholder="ex: minuman-segar"
+                placeholder={initialData ? 'Ketik password baru...' : 'Buat sandi yang aman'}
                 className="w-full bg-transparent border border-[#DCC7AA] rounded-2xl px-4 py-3 text-sm font-semibold text-[#4B3832] focus:border-[#6F4E37] focus:ring-1 focus:ring-[#6F4E37] outline-none transition-all placeholder:text-[#DCC7AA]"
               />
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <input
+                id="staff-active"
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="w-5 h-5 rounded border-[#DCC7AA] text-[#4B3832] focus:ring-[#6F4E37] cursor-pointer"
+              />
+              <label htmlFor="staff-active" className="text-sm font-semibold text-[#4B3832] cursor-pointer select-none">
+                Akun Aktif (Bisa Login)
+              </label>
             </div>
           </div>
 
@@ -142,7 +157,7 @@ function CategoryForm({ initialData, onClose, onSave }: Omit<CategoryModalProps,
           </button>
           <button
             type="submit"
-            form="category-form"
+            form="staff-form"
             className="px-8 py-3 rounded-full bg-[#4B3832] hover:bg-[#6F4E37] text-[#FFFDF7] text-sm font-bold transition-colors shadow-sm"
           >
             Simpan

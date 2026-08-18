@@ -8,12 +8,14 @@ interface CategoryTabsProps {
   categories: Category[];
   activeCategorySlug: string;
   onSelectCategory: (slug: string) => void;
+  menuCounts: Record<string, number>;
 }
 
 export function CategoryTabs({
   categories,
   activeCategorySlug,
   onSelectCategory,
+  menuCounts,
 }: CategoryTabsProps) {
   // Gunakan categories langsung tanpa prepend "Semua Menu" karena sudah ada di data sumber
   const displayCategories = categories;
@@ -55,7 +57,7 @@ export function CategoryTabs({
               <div className="z-10 mt-auto">
                 <h3 className="font-bold text-lg leading-tight">{category.name}</h3>
                 <p className={`text-xs mt-1 ${isActive ? 'text-[#FFFDF7]/70' : 'text-[#6F4E37]/70'}`}>
-                  15 menu
+                  {menuCounts[category._id] || 0} menu
                 </p>
               </div>
 

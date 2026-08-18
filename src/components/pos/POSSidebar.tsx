@@ -4,6 +4,7 @@
 import React from 'react';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 interface POSSidebarProps {
   isOpen: boolean;
@@ -12,6 +13,11 @@ interface POSSidebarProps {
 }
 
 export function POSSidebar({ isOpen, onClose, onOpenPrinter }: POSSidebarProps) {
+  const pathname = usePathname();
+
+  const isHistoryActive = pathname === '/pos/history';
+  const isPosActive = pathname === '/pos';
+
   return (
     <>
       {/* Backdrop */}
@@ -39,18 +45,27 @@ export function POSSidebar({ isOpen, onClose, onOpenPrinter }: POSSidebarProps) 
         </div>
 
         <nav className="p-4 flex-1 space-y-2">
-          <button
+          <Link
+            href="/pos"
             onClick={onClose}
-            className="w-full flex items-center gap-3 px-4 py-3 bg-[#4B3832] text-[#FFFDF7] rounded-2xl font-bold shadow-sm"
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold shadow-sm transition-colors ${
+              isPosActive 
+                ? 'bg-[#4B3832] text-[#FFFDF7]' 
+                : 'text-[#6F4E37] hover:bg-[#F5E6CA] hover:text-[#4B3832]'
+            }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
             Kasir Utama
-          </button>
+          </Link>
 
           <Link
             href="/pos/history"
             onClick={onClose}
-            className="w-full flex items-center gap-3 px-4 py-3 text-[#6F4E37] hover:bg-[#F5E6CA] hover:text-[#4B3832] rounded-2xl font-bold transition-colors"
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold transition-colors ${
+              isHistoryActive 
+                ? 'bg-[#4B3832] text-[#FFFDF7]' 
+                : 'text-[#6F4E37] hover:bg-[#F5E6CA] hover:text-[#4B3832]'
+            }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
             Riwayat Pesanan
