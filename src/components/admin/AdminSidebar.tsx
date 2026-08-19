@@ -17,7 +17,8 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
     { name: 'Dashboard', href: '/admin/dashboard', icon: DashboardIcon },
     { name: 'Kelola Menu', href: '/admin/menu', icon: MenuIcon },
     { name: 'Kelola Staff', href: '/admin/staff', icon: UsersIcon },
-    { name: 'Laporan', href: '/admin/report', icon: ReportIcon },
+    { name: 'Pengeluaran', href: '/admin/expenses', icon: ExpenseIcon },
+    { name: 'Laporan Keuangan', href: '/admin/reports', icon: ReportIcon },
     { name: 'Pengaturan', href: '/admin/settings', icon: SettingsIcon },
   ];
 
@@ -108,6 +109,13 @@ function UsersIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" {...props}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+  );
+}
+function ExpenseIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
     </svg>
   );
 }

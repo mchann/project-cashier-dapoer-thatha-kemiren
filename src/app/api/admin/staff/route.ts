@@ -58,9 +58,10 @@ export async function POST(req: Request) {
     delete staffResponse.password;
 
     return NextResponse.json(staffResponse, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Create staff error:', error);
     return NextResponse.json(
-      { error: 'Gagal membuat akun staff' },
+      { error: 'Gagal membuat akun staff: ' + error.message },
       { status: 500 }
     );
   }

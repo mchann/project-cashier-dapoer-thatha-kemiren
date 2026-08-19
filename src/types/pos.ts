@@ -26,6 +26,7 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  savedQuantity?: number;
   notes?: string;
 }
 
@@ -40,13 +41,23 @@ export interface Order {
   orderType: OrderType;
   paymentStatus: PaymentStatus;
   items: OrderItem[];
+  voidedItems?: {
+    name: string;
+    quantity: number;
+    price: number;
+    date: string;
+  }[];
   subtotal: number;
   dpAmount: number;
   guideCommission: number;
   grandTotal: number;
+  amountReceived?: number;
+  changeAmount?: number;
   partnerId?: string;
   partnerName?: string;
   servedBy?: string;
+  cashierName?: string;
+  cashierId?: string;
   isVoided?: boolean;
   voidReason?: string;
   voidedBy?: string;

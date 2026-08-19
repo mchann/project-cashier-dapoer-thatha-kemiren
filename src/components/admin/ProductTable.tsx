@@ -55,7 +55,8 @@ export function ProductTable({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#F5E6CA] text-[#6F4E37] uppercase text-xs font-bold tracking-wider border-b border-[#DCC7AA]">
-              <th className="p-4 rounded-tl-2xl">Info Menu</th>
+              <th className="p-4 rounded-tl-2xl w-12 text-center">No</th>
+              <th className="p-4">Info Menu</th>
               <th className="p-4 text-right">Harga Jual</th>
               <th className="p-4 text-center">Stok (Porsi)</th>
               <th className="p-4 text-center">Status Jual</th>
@@ -63,7 +64,7 @@ export function ProductTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-[#DCC7AA] bg-[#FFFDF7]">
-            {paginatedProducts.map((p) => {
+            {paginatedProducts.map((p, index) => {
               const isOutOfStock = p.stock <= 0;
               const isOffline = !p.isAvailable;
 
@@ -72,6 +73,9 @@ export function ProductTable({
                   key={p._id}
                   className="hover:bg-[#F5E6CA] transition-colors duration-200 group"
                 >
+                  <td className="p-4 text-center font-bold text-[#6F4E37] text-sm">
+                    {startIndex + index + 1}
+                  </td>
                   {/* Kolom 1: Info Menu (Gambar & Nama) */}
                   <td className="p-4 min-w-[280px]">
                     <div className="flex items-start gap-4">

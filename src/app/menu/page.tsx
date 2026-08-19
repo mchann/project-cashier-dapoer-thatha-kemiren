@@ -4,26 +4,25 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-// Mock Data untuk Menu Lengkap
-const MENU_ITEMS = [
-  { id: 1, category: 'Makanan', name: 'Pecel Pitik Kemiren', price: 'Rp 45.000', image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=600&auto=format&fit=crop' },
-  { id: 2, category: 'Makanan', name: 'Uyah Asem Ayam', price: 'Rp 35.000', image: 'https://images.unsplash.com/photo-1548943487-a2e4f43b4850?q=80&w=600&auto=format&fit=crop' },
-  { id: 3, category: 'Makanan', name: 'Nasi Tempong Biasa', price: 'Rp 20.000', image: 'https://images.unsplash.com/photo-1572656631137-7935297eff55?q=80&w=600&auto=format&fit=crop' },
-  { id: 4, category: 'Makanan', name: 'Nasi Goreng Thatha', price: 'Rp 25.000', image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?q=80&w=600&auto=format&fit=crop' },
-  
-  { id: 5, category: 'Minuman', name: 'Kopi Jaran Goyang', price: 'Rp 15.000', image: 'https://images.unsplash.com/photo-1559525839-b184a4d698c7?q=80&w=600&auto=format&fit=crop' },
-  { id: 6, category: 'Minuman', name: 'Es Degan Gula Aren', price: 'Rp 12.000', image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?q=80&w=600&auto=format&fit=crop' },
-  { id: 7, category: 'Minuman', name: 'Wedang Uwuh', price: 'Rp 10.000', image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?q=80&w=600&auto=format&fit=crop' },
-  { id: 8, category: 'Minuman', name: 'Es Teh Manis', price: 'Rp 5.000', image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=600&auto=format&fit=crop' },
-  
-  { id: 9, category: 'Snack', name: 'Kucur', price: 'Rp 10.000', image: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?q=80&w=600&auto=format&fit=crop' },
-  { id: 10, category: 'Snack', name: 'Pisang Goreng Keju', price: 'Rp 15.000', image: 'https://images.unsplash.com/photo-1596450514735-111a2fe02935?q=80&w=600&auto=format&fit=crop' },
-  { id: 11, category: 'Snack', name: 'Tahu Walik', price: 'Rp 12.000', image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?q=80&w=600&auto=format&fit=crop' },
-];
+
 
 export default function PublicMenuPage() {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+    const [isDarkMode, setIsDarkMode] = useState(true);
   const [activeCategory, setActiveCategory] = useState('Semua');
+  const [products, setProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/admin/products')
+      .then(res => res.json())
+      .then(data => {
+        if(Array.isArray(data)) {
+           setProducts(data.filter(p => p.isAvailable));
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setIsLoading(false));
+  }, []);
 
   // Toggle Theme Function
   const toggleTheme = () => {
@@ -44,10 +43,12 @@ export default function PublicMenuPage() {
     }
   }, [isDarkMode]);
 
-  const categories = ['Semua', 'Makanan', 'Minuman', 'Snack'];
+  const uniqueCategories = Array.from(new Set(products.map(p => p.category?.name || p.category || 'UMUM')));
+  const categories = ['Semua', ...uniqueCategories];
+  
   const filteredMenu = activeCategory === 'Semua' 
-    ? MENU_ITEMS 
-    : MENU_ITEMS.filter(m => m.category === activeCategory);
+    ? products 
+    : products.filter(m => (m.category?.name || m.category || 'UMUM') === activeCategory);
 
   return (
     <div className={`min-h-screen transition-colors duration-500 pb-20 ${
@@ -127,7 +128,7 @@ export default function PublicMenuPage() {
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {filteredMenu.map((item) => (
-            <div key={item.id} className="group cursor-pointer">
+            <div key={item._id || item.id} className="group cursor-pointer">
               {/* Image Container */}
               <div className={`relative aspect-[4/5] rounded-2xl overflow-hidden mb-4 border ${
                 isDarkMode ? 'border-[#e5d3b3]/10' : 'border-[#DCC7AA]'
@@ -137,27 +138,17 @@ export default function PublicMenuPage() {
                   alt={item.name} 
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
-                {/* Hover Overlay */}
-                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center ${
-                  isDarkMode ? 'bg-black/40' : 'bg-[#F5E6CA]/40 backdrop-blur-[2px]'
-                }`}>
-                  <span className={`text-[10px] uppercase tracking-widest font-bold px-4 py-2 border rounded-full ${
-                    isDarkMode ? 'text-white border-white' : 'text-[#4B3832] border-[#4B3832] bg-[#FFFDF7]/80'
-                  }`}>
-                    Lihat Detail
-                  </span>
-                </div>
               </div>
               
               {/* Info */}
               <div className="text-center">
                 <p className={`text-[9px] uppercase tracking-widest mb-1 ${
                   isDarkMode ? 'text-[#e5d3b3]/60' : 'text-[#DCC7AA]'
-                }`}>{item.category}</p>
+                }`}>{item.category?.name || (typeof item.category === 'string' ? item.category : 'UMUM')}</p>
                 <h3 className="font-serif text-lg mb-1">{item.name}</h3>
                 <p className={`font-medium ${
                   isDarkMode ? 'text-[#e5d3b3]' : 'text-[#6F4E37]'
-                }`}>{item.price}</p>
+                }`}>{item.price ? `Rp ${Number(item.price).toLocaleString('id-ID')}` : '-'}</p>
               </div>
             </div>
           ))}

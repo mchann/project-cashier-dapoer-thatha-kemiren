@@ -1,7 +1,7 @@
 // src/app/(admin)/admin/dashboard/page.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 // Data Dummy untuk presentasi
 const DUMMY_RECENT_TRANSACTIONS = [
@@ -12,6 +12,29 @@ const DUMMY_RECENT_TRANSACTIONS = [
 ];
 
 export default function AdminDashboardPage() {
+  const [stats, setStats] = useState({
+    revenueToday: 0,
+    transactionsCount: 0,
+    activeProductsCount: 0,
+    pendingCount: 0,
+    recentTransactions: [] as any[]
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/admin/dashboard');
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard stats', error);
+      }
+    };
+    fetchStats();
+  }, []);
+
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -35,13 +58,13 @@ export default function AdminDashboardPage() {
         {/* Card 1: Utama / Solid */}
         <div className="bg-[#4B3832] p-6 rounded-[2rem] shadow-md border border-[#4B3832] flex flex-col justify-between relative overflow-hidden group">
            <div className="flex justify-between items-start mb-4 relative z-10">
-             <span className="text-[#FFFDF7] font-bold text-sm">Pendapatan Hari Ini</span>
+             <span className="text-[#FFFDF7] font-bold text-sm">Penjualan Hari Ini</span>
              <div className="w-8 h-8 rounded-full bg-[#FFFDF7]/10 flex items-center justify-center text-[#FFFDF7]">
                <svg className="w-4 h-4 transform group-hover:-translate-y-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
              </div>
            </div>
            <div className="relative z-10">
-             <h3 className="text-3xl font-black text-[#FFFDF7] tracking-tight mb-2">Rp 4,5Jt</h3>
+             <h3 className="text-3xl font-black text-[#FFFDF7] tracking-tight mb-2">{formatRupiah(stats.revenueToday)}</h3>
              <span className="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">
                 Penjualan Harian
              </span>
@@ -59,7 +82,7 @@ export default function AdminDashboardPage() {
              </div>
            </div>
            <div>
-             <h3 className="text-4xl font-black text-[#4B3832] tracking-tight mb-2">42</h3>
+             <h3 className="text-4xl font-black text-[#4B3832] tracking-tight mb-2">{stats.transactionsCount}</h3>
              <span className="text-[#8B7355] text-[10px] font-bold uppercase tracking-wider">Nota Lunas Hari Ini</span>
            </div>
         </div>
@@ -73,7 +96,7 @@ export default function AdminDashboardPage() {
              </div>
            </div>
            <div>
-             <h3 className="text-4xl font-black text-[#4B3832] tracking-tight mb-2">35</h3>
+             <h3 className="text-4xl font-black text-[#4B3832] tracking-tight mb-2">{stats.activeProductsCount}</h3>
              <span className="text-[#8B7355] text-[10px] font-bold uppercase tracking-wider">Item Aktif Dijual</span>
            </div>
         </div>
@@ -87,7 +110,7 @@ export default function AdminDashboardPage() {
              </div>
            </div>
            <div className="relative z-10">
-             <h3 className="text-4xl font-black text-[#4B3832] tracking-tight mb-2">4</h3>
+             <h3 className="text-4xl font-black text-[#4B3832] tracking-tight mb-2">{stats.pendingCount}</h3>
              <span className="text-amber-600 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
                Menunggu Pembayaran
@@ -136,24 +159,30 @@ export default function AdminDashboardPage() {
             <span className="text-[#DCC7AA] text-xs font-bold border border-[#DCC7AA]/30 px-2 py-1 rounded-lg">Real-time</span>
           </div>
           
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 max-h-[320px]">
             <ul className="space-y-4">
-              {DUMMY_RECENT_TRANSACTIONS.map((trx, idx) => (
-                <li key={idx} className="flex gap-4 p-3 bg-[#FFFDF7]/5 hover:bg-[#FFFDF7]/10 rounded-2xl transition-colors border border-[#FFFDF7]/10">
-                  <div className="w-10 h-10 rounded-full bg-[#FFFDF7] text-[#4B3832] flex items-center justify-center font-black shrink-0">
-                    {trx.table}
-                  </div>
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h4 className="font-bold text-sm truncate">{trx.name}</h4>
-                    <p className="text-[#DCC7AA] text-[10px] font-bold">
-                      {trx.id} • {trx.time}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span className="block font-black text-sm text-emerald-400">{formatRupiah(trx.total)}</span>
-                  </div>
+              {stats.recentTransactions.length === 0 ? (
+                <li className="p-3 text-center text-[#DCC7AA] text-sm italic">
+                  Belum ada transaksi hari ini.
                 </li>
-              ))}
+              ) : (
+                stats.recentTransactions.map((trx: any) => (
+                  <li key={trx._id} className="flex gap-4 p-3 bg-[#FFFDF7]/5 hover:bg-[#FFFDF7]/10 rounded-2xl transition-colors border border-[#FFFDF7]/10">
+                    <div className="w-10 h-10 rounded-full bg-[#FFFDF7] text-[#4B3832] flex items-center justify-center font-black shrink-0">
+                      {trx.tableNumber || 'TA'}
+                    </div>
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <h4 className="font-bold text-sm truncate">{trx.customerName}</h4>
+                      <p className="text-[#DCC7AA] text-[10px] font-bold">
+                        {trx.invoiceNumber} • {new Date(trx.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="block font-black text-sm text-emerald-400">{formatRupiah(trx.grandTotal)}</span>
+                    </div>
+                  </li>
+                ))
+              )}
             </ul>
           </div>
 

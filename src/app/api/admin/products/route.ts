@@ -10,7 +10,17 @@ export async function GET() {
     const products = await Product.find({})
       .populate('categoryId', 'name')
       .sort({ createdAt: -1 });
-    return NextResponse.json(products);
+    
+    const formattedProducts = products.map(p => {
+      const pObj = p.toObject();
+      return {
+        ...pObj,
+        category: pObj.categoryId,
+        categoryId: pObj.categoryId?._id || pObj.categoryId
+      };
+    });
+
+    return NextResponse.json(formattedProducts);
   } catch (error) {
     return NextResponse.json(
       { error: 'Gagal mengambil data menu' },
@@ -44,6 +54,16 @@ export async function POST(req: Request) {
     
     // Populate the newly created product to return complete data
     const populatedProduct = await Product.findById(newProduct._id).populate('categoryId', 'name');
+    
+    if (populatedProduct) {
+      const pObj = populatedProduct.toObject();
+      const formattedProduct = {
+        ...pObj,
+        category: pObj.categoryId,
+        categoryId: pObj.categoryId?._id || pObj.categoryId
+      };
+      return NextResponse.json(formattedProduct, { status: 201 });
+    }
 
     return NextResponse.json(populatedProduct, { status: 201 });
   } catch (error) {

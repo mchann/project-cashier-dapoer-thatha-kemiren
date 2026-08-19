@@ -11,6 +11,8 @@ export default function AdminStaffPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffData | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [staffToDelete, setStaffToDelete] = useState<StaffData | null>(null);
 
   // Notifikasi
   const [notifMessage, setNotifMessage] = useState<string>('');
@@ -37,6 +39,19 @@ export default function AdminStaffPage() {
   useEffect(() => {
     fetchStaff();
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsModalOpen(false);
+        setIsDeleteModalOpen(false);
+      }
+    };
+    if (isModalOpen || isDeleteModalOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen, isDeleteModalOpen]);
 
   const handleOpenAdd = () => {
     setEditingStaff(null);
@@ -74,11 +89,16 @@ export default function AdminStaffPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus akun staff ini secara permanen?')) return;
+  const handleDelete = (staff: StaffData) => {
+    setStaffToDelete(staff);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!staffToDelete?._id) return;
 
     try {
-      const res = await fetch(`/api/admin/staff/${id}`, {
+      const res = await fetch(`/api/admin/staff/${staffToDelete._id}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
@@ -86,6 +106,8 @@ export default function AdminStaffPage() {
         throw new Error(result.error || 'Gagal menghapus');
       }
       showNotification('Akun staff berhasil dihapus!');
+      setIsDeleteModalOpen(false);
+      setStaffToDelete(null);
       fetchStaff();
     } catch (error: any) {
       alert(error.message);
@@ -148,14 +170,19 @@ export default function AdminStaffPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#F5E6CA]/50 border-b border-[#DCC7AA]/50">
-                                    <th className="py-5 px-8 font-bold text-[#4B3832]">Username Login</th>
+                  <th className="py-5 px-8 font-bold text-[#4B3832] w-16 text-center">No</th>
+                  <th className="py-5 px-8 font-bold text-[#4B3832]">Username Login</th>
                   <th className="py-5 px-8 font-bold text-[#4B3832]">Status</th>
+                  <th className="py-5 px-8 font-bold text-[#4B3832]">Tanggal Bergabung</th>
                   <th className="py-5 px-8 font-bold text-[#4B3832] text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody>
-                {staffList.map((staff) => (
+                {staffList.map((staff, index) => (
                   <tr key={staff._id} className="border-b border-[#DCC7AA]/30 hover:bg-[#F5E6CA]/20 transition-colors group">
+                    <td className="py-5 px-8 text-center text-sm font-bold text-[#6F4E37]">
+                      {index + 1}
+                    </td>
                     <td className="py-5 px-8">
                       <div className="font-bold text-[#4B3832]">{staff.username}</div>
                     </td>
@@ -170,6 +197,15 @@ export default function AdminStaffPage() {
                         </span>
                       )}
                     </td>
+                    <td className="py-5 px-8">
+                      <div className="text-sm font-medium text-[#6F4E37]">
+                        {new Date(staff.createdAt || Date.now()).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </div>
+                    </td>
                     <td className="py-5 px-8 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
@@ -180,7 +216,7 @@ export default function AdminStaffPage() {
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                         </button>
                         <button
-                          onClick={() => handleDelete(staff._id!)}
+                          onClick={() => handleDelete(staff)}
                           className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                           title="Hapus Staff"
                         >
@@ -202,6 +238,43 @@ export default function AdminStaffPage() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveStaff}
       />
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
+          onClick={() => { setIsDeleteModalOpen(false); setStaffToDelete(null); }}
+        >
+          <div 
+            className="bg-[#FFFDF7] rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-[#DCC7AA] animate-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4 text-red-600">
+                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              </div>
+              <h3 className="text-xl font-black text-[#4B3832] mb-2">Hapus Staff?</h3>
+              <p className="text-sm text-[#6F4E37] font-medium mb-6">
+                Apakah Anda yakin ingin menghapus akun <strong>{staffToDelete?.name}</strong> secara permanen?
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => { setIsDeleteModalOpen(false); setStaffToDelete(null); }}
+                  className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={confirmDelete}
+                  className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shadow-md shadow-red-600/20"
+                >
+                  Ya, Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

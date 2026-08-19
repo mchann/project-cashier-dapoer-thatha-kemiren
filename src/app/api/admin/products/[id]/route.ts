@@ -36,7 +36,14 @@ export async function PUT(req: Request, { params }: Params) {
       );
     }
 
-    return NextResponse.json(updatedProduct);
+    const pObj = updatedProduct.toObject();
+    const formattedProduct = {
+      ...pObj,
+      category: pObj.categoryId,
+      categoryId: pObj.categoryId?._id || pObj.categoryId
+    };
+
+    return NextResponse.json(formattedProduct);
   } catch (error) {
     return NextResponse.json(
       { error: 'Gagal memperbarui menu' },

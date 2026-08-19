@@ -6,6 +6,29 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import mongoose from 'mongoose';
 
+export async function GET() {
+  try {
+    await connectMongo();
+    
+    // Ambil session kasir
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Tidak ada akses (Unauthorized)' }, { status: 401 });
+    }
+
+    // Mengambil semua transaksi lunas, diurutkan dari terbaru
+    const transactions = await Transaction.find({ paymentStatus: 'paid' }).sort({ createdAt: -1 });
+    
+    return NextResponse.json(transactions);
+  } catch (error) {
+    console.error('Fetch Transactions Error:', error);
+    return NextResponse.json(
+      { error: 'Gagal mengambil data transaksi' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(req: Request) {
   try {
     await connectMongo();

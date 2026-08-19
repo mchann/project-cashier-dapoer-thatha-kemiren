@@ -62,7 +62,7 @@ export function POSHeader({
       {/* Kanan: Stats, Tombol, Profile */}
       <div className="flex items-center gap-4">
         <div className="hidden lg:flex flex-col items-end mr-1">
-          <span className="text-[10px] font-bold text-[#6F4E37] uppercase tracking-wider">Pendapatan Hari Ini</span>
+          <span className="text-[10px] font-bold text-[#6F4E37] uppercase tracking-wider">Penjualan Hari Ini</span>
           <span className="text-sm font-black text-[#4B3832]">{formatRupiah(totalRevenue)}</span>
         </div>
         
@@ -94,13 +94,13 @@ export function POSHeader({
         {/* Profile */}
         <div className="flex items-center gap-3 bg-white border border-[#DCC7AA] pl-1 pr-4 py-1 rounded-full cursor-pointer hover:bg-[#F5E6CA] transition-colors">
           <img 
-            src="https://ui-avatars.com/api/?name=Siti+Kasir&background=4B3832&color=FFFDF7" 
+            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(cashierName)}&background=4B3832&color=FFFDF7`}
             alt="Profile" 
             className="w-8 h-8 rounded-full"
           />
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-[#4B3832] leading-none mb-1">{cashierName.split(' ')[0]}</span>
-            <span className="text-[10px] text-[#6F4E37] leading-none">Kasir</span>
+            <span className="text-xs font-bold text-[#4B3832] leading-none mb-1">{cashierName}</span>
+            <span className="text-[10px] text-[#6F4E37] leading-none uppercase">{shiftName}</span>
           </div>
         </div>
       </div>
