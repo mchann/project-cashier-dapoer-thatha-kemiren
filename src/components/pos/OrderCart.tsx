@@ -75,39 +75,41 @@ export function OrderCart({
       {/* 1. Header & Options (FIXED) */}
       <div className="shrink-0 flex flex-col gap-4 px-6 pt-6 pb-2">
         {/* Title & Clear */}
-        <div className="flex items-center justify-between relative">
-          <div className="flex-1 text-center">
+        <div className="flex items-start justify-between gap-2">
+          <div className="shrink-0">
             <h2 className="text-lg font-black tracking-tight text-[#4B3832]">
               Nota Pesanan
             </h2>
             <p className="text-xs font-bold text-[#6F4E37]">#27362</p>
           </div>
           {/* Tombol Options / Clear */}
-          <div className="absolute right-0 flex items-center gap-2">
+          <div className="flex flex-wrap justify-end items-center gap-2">
             {/* Tombol Mitra Travel / Guide */}
             <button
               type="button"
               onClick={() => setIsTravelModalOpen(true)}
-              className={`w-9 h-9 flex items-center justify-center rounded-full border border-[#DCC7AA] transition-colors shadow-sm ${
+              className={`h-9 px-3 flex items-center justify-center rounded-xl border border-[#DCC7AA] transition-colors shadow-sm ${
                 (selectedPartnerId.trim() !== '' || guideCommission > 0) ? 'bg-[#4B3832] text-[#FFFDF7]' : 'bg-[#FFFDF7] text-[#6F4E37] hover:bg-[#F5E6CA]'
               }`}
               title="Mitra Agen / Tour Guide"
             >
-              {/* Ikon Bendera Tour */}
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path></svg>
+              <span className="text-[10px] font-black uppercase tracking-wider">Guide</span>
             </button>
 
             {/* Tombol Kosongkan Keranjang */}
-            {items.length > 0 && (
-              <button
-                type="button"
-                onClick={onClearCart}
-                className="px-3 h-9 flex items-center justify-center rounded-xl border border-[#DCC7AA] text-xs font-black tracking-wider uppercase text-[#ef4444] bg-[#FFFDF7] hover:bg-[#F5E6CA] transition-colors shadow-sm"
-                title="Kosongkan Keranjang"
-              >
-                Hapus
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={onClearCart}
+              disabled={items.length === 0}
+              className={`px-3 h-9 flex items-center justify-center rounded-xl border border-[#DCC7AA] text-[10px] font-black tracking-wider uppercase transition-colors shadow-sm ${
+                items.length > 0 
+                  ? 'text-[#ef4444] bg-[#FFFDF7] hover:bg-[#F5E6CA]' 
+                  : 'text-[#DCC7AA] bg-[#FFFDF7] opacity-50 cursor-not-allowed'
+              }`}
+              title="Kosongkan Keranjang"
+            >
+              Kosongkan Keranjang
+            </button>
           </div>
         </div>
 
@@ -122,7 +124,7 @@ export function OrderCart({
                 : 'bg-transparent text-[#6F4E37] border border-[#DCC7AA] hover:bg-[#F5E6CA]'
             }`}
           >
-            Makan di Tempat
+            Makan Sini
           </button>
           <button
             type="button"
@@ -133,7 +135,7 @@ export function OrderCart({
                 : 'bg-transparent text-[#6F4E37] border border-[#DCC7AA] hover:bg-[#F5E6CA]'
             }`}
           >
-            Bawa Pulang
+            Bungkus
           </button>
         </div>
 
@@ -314,7 +316,7 @@ export function OrderCart({
             onClick={onOpenVoidModal}
             className="text-[10px] font-bold text-[#ef4444] hover:underline uppercase tracking-wide"
           >
-            Void / Batal Transaksi
+            Batal Transaksi
           </button>
         </div>
       </div>

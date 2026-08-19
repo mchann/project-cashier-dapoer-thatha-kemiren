@@ -287,7 +287,7 @@ export default function POSPage() {
       
       const payload = {
         tableNumber: orderType === 'takeaway' ? 'TA' : (tableNumber || '00'),
-        customerName: customerName || (orderType === 'takeaway' ? 'Bungkus' : 'Dine In'),
+        customerName: customerName || (orderType === 'takeaway' ? 'Bungkus' : 'Makan Sini'),
         orderType,
         paymentStatus: 'unpaid',
         items: cartItems,
@@ -356,7 +356,7 @@ export default function POSPage() {
           body: JSON.stringify({
             invoiceNumber: `INV-${Date.now()}`,
             tableNumber: orderType === 'takeaway' ? 'TA' : (tableNumber || '00'),
-            customerName: customerName || (orderType === 'takeaway' ? 'Bungkus' : 'Dine In'),
+            customerName: customerName || (orderType === 'takeaway' ? 'Bungkus' : 'Makan Sini'),
             orderType,
             paymentStatus: 'paid',
             items: cartItems,

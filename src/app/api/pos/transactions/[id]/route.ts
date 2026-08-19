@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectMongo from '@/lib/mongodb';
 import Transaction from '@/models/Transaction';
+import { Product } from '@/models/Product';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
@@ -65,6 +66,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const newItems = body.items || [];
     const voidedDiff: any[] = [];
     
+    const stockDiffOps: any[] = [];
+    
     oldItems.forEach((oldItem: any) => {
       const newItem = newItems.find((i: any) => i.productId.toString() === oldItem.productId.toString());
       if (!newItem) {
@@ -75,16 +78,56 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           price: oldItem.price,
           date: new Date()
         });
-      } else if (newItem.quantity < oldItem.quantity) {
-        // Porsi dikurangi
-        voidedDiff.push({
-          name: oldItem.name,
-          quantity: oldItem.quantity - newItem.quantity,
-          price: oldItem.price,
-          date: new Date()
+        stockDiffOps.push({
+          updateOne: {
+            filter: { _id: oldItem.productId },
+            update: { $inc: { stock: oldItem.quantity } }
+          }
+        });
+      } else {
+        const qtyDiff = newItem.quantity - oldItem.quantity;
+        if (qtyDiff < 0) {
+          // Porsi dikurangi
+          voidedDiff.push({
+            name: oldItem.name,
+            quantity: Math.abs(qtyDiff),
+            price: oldItem.price,
+            date: new Date()
+          });
+          stockDiffOps.push({
+            updateOne: {
+              filter: { _id: oldItem.productId },
+              update: { $inc: { stock: Math.abs(qtyDiff) } }
+            }
+          });
+        } else if (qtyDiff > 0) {
+          // Porsi ditambah
+          stockDiffOps.push({
+            updateOne: {
+              filter: { _id: oldItem.productId, stock: { $gte: qtyDiff } },
+              update: { $inc: { stock: -qtyDiff } }
+            }
+          });
+        }
+      }
+    });
+
+    newItems.forEach((newItem: any) => {
+      const oldItem = oldItems.find((i: any) => i.productId.toString() === newItem.productId.toString());
+      if (!oldItem) {
+        // Menu baru ditambahkan
+        stockDiffOps.push({
+          updateOne: {
+            filter: { _id: newItem.productId, stock: { $gte: newItem.quantity } },
+            update: { $inc: { stock: -newItem.quantity } }
+          }
         });
       }
     });
+
+    if (stockDiffOps.length > 0) {
+      await Product.bulkWrite(stockDiffOps);
+    }
 
     if (voidedDiff.length > 0) {
       if (!transaction.voidedItems) transaction.voidedItems = [];
@@ -122,10 +165,23 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     const resolvedParams = await params;
     const transactionId = resolvedParams.id;
 
-    const transaction = await Transaction.findByIdAndDelete(transactionId);
+    const transaction = await Transaction.findById(transactionId);
     if (!transaction) {
       return NextResponse.json({ error: 'Transaksi tidak ditemukan' }, { status: 404 });
     }
+
+    // Kembalikan stok semua item sebelum dihapus
+    if (transaction.items && transaction.items.length > 0) {
+      const bulkOps = transaction.items.map((item: any) => ({
+        updateOne: {
+          filter: { _id: item.productId },
+          update: { $inc: { stock: item.quantity } }
+        }
+      }));
+      await Product.bulkWrite(bulkOps);
+    }
+
+    await Transaction.findByIdAndDelete(transactionId);
 
     return NextResponse.json({ message: 'Transaksi berhasil dihapus' });
   } catch (error: any) {
