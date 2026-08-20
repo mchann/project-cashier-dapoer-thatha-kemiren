@@ -204,7 +204,10 @@ export default function POSPage() {
       if (!res.ok) throw new Error(data.error);
       
       setCustomerName(data.customerName || '');
-      if (data.tableNumber) {
+      if (data.isReservation) {
+        setOrderType('reservation');
+        setDpAmount(data.dpAmount || 0);
+      } else if (data.tableNumber) {
         setTableNumber(data.tableNumber);
         setOrderType('dine_in');
       }

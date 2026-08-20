@@ -9,6 +9,8 @@ export interface IDraftOrder extends Document {
     quantity: number;
     price: number;
   }[];
+  isReservation?: boolean;
+  dpAmount?: number;
   expiresAt: Date;
 }
 
@@ -24,6 +26,8 @@ const draftOrderSchema = new Schema<IDraftOrder>(
         price: { type: Number, required: true, min: 0 },
       },
     ],
+    isReservation: { type: Boolean, default: false },
+    dpAmount: { type: Number, default: 0 },
     expiresAt: { type: Date, required: true, index: { expires: '1d' } } // Auto delete after 1 day
   },
   { timestamps: true }

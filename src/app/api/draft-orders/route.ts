@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   try {
     await connectMongo();
     const body = await req.json();
-    const { customerName, tableNumber, items } = body;
+    const { customerName, tableNumber, items, isReservation, dpAmount } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: 'Keranjang kosong' }, { status: 400 });
@@ -31,6 +31,8 @@ export async function POST(req: Request) {
       customerName: customerName || 'Tamu',
       tableNumber: tableNumber || '',
       items,
+      isReservation: isReservation || false,
+      dpAmount: dpAmount || 0,
       expiresAt
     });
 

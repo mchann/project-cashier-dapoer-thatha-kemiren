@@ -6,14 +6,14 @@ import { OrderItem } from '@/types/pos';
 import { TravelPartnerSelector, AppliedGuideVoucher } from './TravelPartnerSelector';
 
 interface OrderCartProps {
-  orderType: 'dine_in' | 'takeaway';
+  orderType: 'dine_in' | 'takeaway' | 'reservation';
   tableNumber: string;
   customerName: string;
   items: OrderItem[];
   paymentMode: 'pay_now' | 'save_faktur';
   dpAmount: number;
   guideVoucher: AppliedGuideVoucher | null;
-  onChangeOrderType: (type: 'dine_in' | 'takeaway') => void;
+  onChangeOrderType: (type: 'dine_in' | 'takeaway' | 'reservation') => void;
   onUpdateTableNumber: (val: string) => void;
   onUpdateCustomerName: (val: string) => void;
   onUpdateQuantity: (productId: string, delta: number) => void;
@@ -138,6 +138,11 @@ export function OrderCart({
           >
             Bungkus
           </button>
+          {orderType === 'reservation' && (
+            <div className="flex-1 py-2 px-3 rounded-full font-bold text-xs text-center bg-[#4B3832] text-[#FFFDF7] shadow-sm cursor-default">
+              Reservasi
+            </div>
+          )}
         </div>
 
         {/* Input Nomor Meja & Nama Pelanggan */}

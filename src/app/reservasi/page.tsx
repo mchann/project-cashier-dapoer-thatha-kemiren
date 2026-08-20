@@ -86,6 +86,22 @@ export default function ReservationPage() {
       alert("Mohon lengkapi Nama, Tanggal, Waktu, dan Jumlah Orang terlebih dahulu!");
       return;
     }
+
+    // Validasi jam operasional (07:30 - 22:00)
+    const timeParts = formData.time.split(':');
+    if (timeParts.length === 2) {
+      const hours = parseInt(timeParts[0], 10);
+      const minutes = parseInt(timeParts[1], 10);
+      const totalMinutes = hours * 60 + minutes;
+      const minMinutes = 7 * 60 + 30; // 07:30
+      const maxMinutes = 22 * 60; // 22:00
+      
+      if (totalMinutes < minMinutes || totalMinutes > maxMinutes) {
+        alert("Mohon maaf, jam operasional kami adalah 07:30 hingga 22:00. Silakan pilih waktu kedatangan pada rentang waktu tersebut.");
+        return;
+      }
+    }
+
     setStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -126,7 +142,9 @@ export default function ReservationPage() {
         body: JSON.stringify({
           customerName: formData.name,
           tableNumber: '', // Kosongkan, nanti diisi kasir
-          items: draftItems
+          items: draftItems,
+          isReservation: true,
+          dpAmount: Object.keys(cart).length > 0 ? dpAmount : 0
         })
       });
       const data = await res.json();
@@ -143,8 +161,9 @@ export default function ReservationPage() {
       message += `_(Tunjukkan kode ini ke kasir)_\n\n`;
     }
     message += `*Nama:* ${formData.name}\n`;
-    message += `*Tanggal:* ${formData.date}\n`;
-    message += `*Waktu:* ${formData.time}\n`;
+    const formattedDate = new Date(formData.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    message += `*Tanggal Kedatangan:* ${formattedDate}\n`;
+    message += `*Waktu Kedatangan:* ${formData.time}\n`;
     message += `*Jumlah Tamu:* ${formData.pax} Orang\n`;
     if (formData.notes) {
       message += `*Catatan Tambahan:* ${formData.notes}\n`;
@@ -243,7 +262,8 @@ export default function ReservationPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider mb-2 opacity-80">Waktu Kedatangan</label>
-                    <input type="time" name="time" value={formData.time} onChange={handleInputChange} className={`w-full bg-transparent border rounded-2xl px-4 py-4 outline-none focus:ring-1 transition-all ${isDarkMode ? 'border-[#e5d3b3]/30 focus:border-[#e5d3b3]' : 'border-[#DCC7AA] focus:border-[#4B3832]'}`} />
+                    <input type="time" name="time" min="07:30" max="22:00" value={formData.time} onChange={handleInputChange} className={`w-full bg-transparent border rounded-2xl px-4 py-4 outline-none focus:ring-1 transition-all ${isDarkMode ? 'border-[#e5d3b3]/30 focus:border-[#e5d3b3]' : 'border-[#DCC7AA] focus:border-[#4B3832]'}`} />
+                    <p className="text-[10px] opacity-60 mt-2">*Jam Buka: 07:30 - 22:00</p>
                   </div>
                 </div>
                 <div>
