@@ -9,6 +9,7 @@ interface ProductTableProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string, productName: string) => void;
   onAdjustStock: (productId: string, delta: number) => void;
+  onSetStock?: (productId: string, newStock: number) => void;
   onToggleAvailable: (productId: string, currentStatus: boolean) => void;
 }
 
@@ -17,6 +18,7 @@ export function ProductTable({
   onEditProduct,
   onDeleteProduct,
   onAdjustStock,
+  onSetStock,
   onToggleAvailable,
 }: ProductTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -138,13 +140,24 @@ export function ProductTable({
                       </button>
 
                       <div className="w-12 text-center">
-                        <span
-                          className={`text-lg font-black ${
+                        <input
+                          type="number"
+                          key={p._id + '-' + p.stock}
+                          defaultValue={p.stock}
+                          min="0"
+                          onBlur={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val) && val !== p.stock && onSetStock) {
+                              onSetStock(p._id, val);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') e.currentTarget.blur();
+                          }}
+                          className={`w-full text-center bg-transparent border-none outline-none text-lg font-black p-0 m-0 focus:ring-0 focus:bg-[#DCC7AA]/20 rounded transition-colors ${
                             isOutOfStock ? 'text-[#ef4444]' : 'text-[#4B3832]'
                           }`}
-                        >
-                          {p.stock}
-                        </span>
+                        />
                         <span className="block text-[9px] font-bold text-[#DCC7AA] -mt-1 uppercase tracking-wider">
                           Porsi
                         </span>
