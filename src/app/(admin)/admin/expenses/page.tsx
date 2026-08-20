@@ -26,7 +26,10 @@ export default function ExpensesPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Filter & Pagination
+  const [viewMode, setViewMode] = useState<'today' | 'all'>('today');
+  const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('semua');
+  const [dateFilter, setDateFilter] = useState<string>(''); // Filter kalender (opsional)
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
@@ -140,14 +143,31 @@ export default function ExpensesPage() {
 
   // Filter Data
   const filteredExpenses = useMemo(() => {
-    if (categoryFilter === 'semua') return expenses;
-    return expenses.filter(e => e.category === categoryFilter);
-  }, [expenses, categoryFilter]);
+    return expenses.filter(e => {
+      // 1. Kategori
+      const matchCategory = categoryFilter === 'semua' || e.category === categoryFilter;
+      
+      // 2. Tanggal & ViewMode
+      let matchDate = true;
+      if (viewMode === 'today') {
+        const todayStr = new Date().toISOString().split('T')[0];
+        matchDate = e.date.startsWith(todayStr);
+      } else if (dateFilter !== '') {
+        matchDate = e.date.startsWith(dateFilter);
+      }
+
+      // 3. Search Query
+      const q = searchQuery.toLowerCase();
+      const matchSearch = q === '' || e.title.toLowerCase().includes(q) || (e.notes && e.notes.toLowerCase().includes(q));
+
+      return matchCategory && matchDate && matchSearch;
+    });
+  }, [expenses, categoryFilter, dateFilter, viewMode, searchQuery]);
 
   // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [categoryFilter]);
+  }, [categoryFilter, dateFilter, viewMode, searchQuery]);
 
   // Paginate Data
   const paginatedExpenses = useMemo(() => {
@@ -156,23 +176,10 @@ export default function ExpensesPage() {
   }, [filteredExpenses, currentPage]);
   const totalPages = Math.ceil(filteredExpenses.length / ITEMS_PER_PAGE) || 1;
 
-  // Menghitung Total Pengeluaran Hari Ini
-  const todayExpense = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    return expenses
-      .filter(e => e.date.startsWith(todayStr))
-      .reduce((sum, e) => sum + e.amount, 0);
-  }, [expenses]);
-
-  const todayExpenseCount = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    return expenses.filter(e => e.date.startsWith(todayStr)).length;
-  }, [expenses]);
-
-  // Menghitung Total Pengeluaran Keseluruhan (Bulan ini / Semua yg ter-load)
-  const totalExpense = useMemo(() => {
-    return expenses.reduce((sum, e) => sum + e.amount, 0);
-  }, [expenses]);
+  // Menghitung Total Pengeluaran berdasarkan Filter
+  const filteredTotalAmount = useMemo(() => {
+    return filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+  }, [filteredExpenses]);
 
   return (
     <div className="p-6 pb-20">
@@ -199,47 +206,90 @@ export default function ExpensesPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="bg-white p-6 rounded-3xl border border-[#DCC7AA] shadow-sm relative overflow-hidden group">
            <div className="absolute top-0 right-0 p-4 opacity-10 text-red-500 group-hover:scale-110 transition-transform"><svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg></div>
-           <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2 relative z-10">Pengeluaran Hari Ini</p>
-           <h3 className="text-4xl font-black text-red-600 relative z-10">Rp {todayExpense.toLocaleString('id-ID')}</h3>
-           <p className="text-xs font-medium text-gray-400 mt-2 relative z-10">Dihitung dari {todayExpenseCount} item hari ini</p>
+           <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2 relative z-10">Total Sesuai Filter</p>
+           <h3 className="text-4xl font-black text-red-600 relative z-10">Rp {filteredTotalAmount.toLocaleString('id-ID')}</h3>
+           <p className="text-xs font-medium text-gray-400 mt-2 relative z-10">Total nominal dari data yang ditampilkan di bawah</p>
         </div>
         <div className="bg-white p-6 rounded-3xl border border-[#DCC7AA] shadow-sm relative overflow-hidden group">
            <div className="absolute top-0 right-0 p-4 opacity-10 text-gray-500 group-hover:scale-110 transition-transform"><svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg></div>
-           <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2 relative z-10">Total Riwayat Pengeluaran</p>
-           <h3 className="text-4xl font-black text-gray-700 relative z-10">Rp {totalExpense.toLocaleString('id-ID')}</h3>
-           <p className="text-xs font-medium text-gray-400 mt-2 relative z-10">Semua yang tercatat saat ini ({expenses.length} item)</p>
+           <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2 relative z-10">Jumlah Item Transaksi</p>
+           <h3 className="text-4xl font-black text-gray-700 relative z-10">{filteredExpenses.length} Item</h3>
+           <p className="text-xs font-medium text-gray-400 mt-2 relative z-10">Banyaknya catatan pengeluaran sesuai filter</p>
         </div>
       </div>
 
-      {/* Table */}
+      {/* Filter & Table Header */}
       <div className="bg-white rounded-3xl border border-[#DCC7AA] overflow-hidden shadow-sm">
-        <div className="p-6 border-b border-[#DCC7AA] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="p-6 border-b border-[#DCC7AA] flex flex-col gap-4">
           <h2 className="text-lg font-bold">Riwayat Pengeluaran (Terbaru)</h2>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setCategoryFilter('semua')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${categoryFilter === 'semua' ? 'bg-[#4B3832] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-            >
-              Semua
-            </button>
-            <button 
-              onClick={() => setCategoryFilter('bahan_baku')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${categoryFilter === 'bahan_baku' ? 'bg-[#4B3832] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-            >
-              Bahan Baku
-            </button>
-            <button 
-              onClick={() => setCategoryFilter('operasional')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${categoryFilter === 'operasional' ? 'bg-[#4B3832] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-            >
-              Operasional
-            </button>
-            <button 
-              onClick={() => setCategoryFilter('lainnya')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors ${categoryFilter === 'lainnya' ? 'bg-[#4B3832] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-            >
-              Lainnya
-            </button>
+          
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+            
+            {/* View Mode Toggle */}
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl shadow-inner shrink-0 w-full md:w-auto">
+              <button 
+                onClick={() => setViewMode('today')}
+                className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-black transition-all ${viewMode === 'today' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Hari Ini
+              </button>
+              <button 
+                onClick={() => setViewMode('all')}
+                className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-black transition-all ${viewMode === 'all' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Semua Riwayat
+              </button>
+            </div>
+
+            {/* Pencarian */}
+            <div className="relative w-full md:w-64 shrink-0">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              <input
+                type="text"
+                placeholder="Cari pengeluaran..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#FFFDF7] border border-[#DCC7AA] rounded-xl pl-9 pr-4 py-2 text-sm font-bold text-[#4B3832] focus:outline-none focus:border-[#4B3832]"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            {/* Filter Tabs Category */}
+            <div className="flex gap-2 bg-[#FFFDF7] p-1.5 rounded-2xl border border-[#DCC7AA] shadow-sm overflow-x-auto w-full md:w-auto">
+              {['semua', 'bahan_baku', 'operasional', 'gaji', 'lainnya'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all ${categoryFilter === cat ? 'bg-[#4B3832] text-white shadow-md' : 'text-[#6F4E37] hover:bg-[#F5E6CA]'}`}
+                >
+                  {cat.replace('_', ' ')}
+                </button>
+              ))}
+            </div>
+
+            {/* Filter Tanggal Khusus (Jika View Mode = All) */}
+            {viewMode === 'all' && (
+              <div className="flex items-center gap-2 w-full md:w-auto bg-[#FFFDF7] border border-[#DCC7AA] rounded-xl px-4 py-1.5 shadow-sm">
+                <label htmlFor="expense-date" className="text-xs font-bold text-[#6F4E37] whitespace-nowrap">Tanggal:</label>
+                <input
+                  id="expense-date"
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="bg-transparent border-none outline-none font-bold text-sm text-[#4B3832]"
+                />
+                {dateFilter && (
+                  <button 
+                    onClick={() => setDateFilter('')}
+                    className="p-1 rounded-full text-red-500 hover:bg-red-50 ml-1"
+                    title="Hapus Filter Tanggal"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -294,6 +344,31 @@ export default function ExpensesPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-[#DCC7AA]/40">
+            <p className="text-sm font-bold text-[#6F4E37]">
+              Menampilkan {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredExpenses.length)} dari {filteredExpenses.length} item
+            </p>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 border border-[#DCC7AA] rounded-xl text-sm font-bold text-[#4B3832] disabled:opacity-50 hover:bg-[#F5E6CA] transition-colors"
+              >
+                Sebelumnya
+              </button>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 border border-[#DCC7AA] rounded-xl text-sm font-bold text-[#4B3832] disabled:opacity-50 hover:bg-[#F5E6CA] transition-colors"
+              >
+                Selanjutnya
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MODAL INPUT PENGELUARAN */}

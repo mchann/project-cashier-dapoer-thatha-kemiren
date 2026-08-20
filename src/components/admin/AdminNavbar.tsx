@@ -4,6 +4,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
+import { NotificationBell } from '@/components/shared/NotificationBell';
+import { AdminFakturGantungModal } from './AdminFakturGantungModal';
 
 interface AdminNavbarProps {
   ownerName?: string;
@@ -12,6 +14,7 @@ interface AdminNavbarProps {
 
 export function AdminNavbar({ ownerName = 'Bapak / Ibu Owner', onMenuClick }: AdminNavbarProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isFakturModalOpen, setIsFakturModalOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,6 +28,7 @@ export function AdminNavbar({ ownerName = 'Bapak / Ibu Owner', onMenuClick }: Ad
   }, []);
 
   return (
+    <>
     <header className="bg-[#FFFDF7]/90 backdrop-blur-md px-4 md:px-8 py-4 border-b border-[#DCC7AA] flex items-center justify-between gap-4 sticky top-0 z-30">
       {/* Kiri: Tombol Hamburger (Mobile) & Search Bar */}
       <div className="flex-1 flex items-center gap-4">
@@ -49,15 +53,16 @@ export function AdminNavbar({ ownerName = 'Bapak / Ibu Owner', onMenuClick }: Ad
       </div>
 
       {/* Aksi Kanan (Profile & POS Button) */}
-      <div className="flex items-center gap-5">
-        <Link
-          href="/pos"
-          className="hidden sm:inline-flex items-center gap-2 bg-[#FFFDF7] hover:bg-[#F5E6CA] text-[#4B3832] font-semibold px-5 py-2.5 rounded-full border border-[#DCC7AA] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-[#6F4E37] cursor-pointer transition-all text-sm"
-          title="Buka Layar Kasir (POS)"
+      <div className="flex items-center gap-3 md:gap-5">
+        <NotificationBell role="admin" />
+        <button
+          onClick={() => setIsFakturModalOpen(true)}
+          className="inline-flex items-center gap-2 bg-[#FFFDF7] hover:bg-[#F5E6CA] text-[#4B3832] font-semibold px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-[#DCC7AA] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-[#6F4E37] cursor-pointer transition-all text-sm"
+          title="Check Faktur Gantung"
         >
           <PosIcon className="w-4 h-4 text-[#6F4E37]" />
-          <span>Layar POS</span>
-        </Link>
+          <span className="hidden sm:inline">Check Faktur Gantung</span>
+        </button>
 
         <div className="w-px h-8 bg-[#DCC7AA] hidden sm:block" aria-hidden="true" />
 
@@ -111,6 +116,12 @@ export function AdminNavbar({ ownerName = 'Bapak / Ibu Owner', onMenuClick }: Ad
         </div>
       </div>
     </header>
+
+      <AdminFakturGantungModal 
+        isOpen={isFakturModalOpen} 
+        onClose={() => setIsFakturModalOpen(false)} 
+      />
+    </>
   );
 }
 

@@ -17,7 +17,10 @@ export interface ITransaction extends Document {
   items: ITransactionItem[];
   subtotal: number;
   dpAmount: number;
+  discountAmount: number;
   guideCommission: number;
+  guideCode?: string;
+  guideName?: string;
   grandTotal: number;
   amountReceived: number;
   changeAmount: number;
@@ -57,7 +60,10 @@ const TransactionSchema = new Schema<ITransaction>(
     items: [TransactionItemSchema],
     subtotal: { type: Number, required: true },
     dpAmount: { type: Number, default: 0 },
+    discountAmount: { type: Number, default: 0 },
     guideCommission: { type: Number, default: 0 },
+    guideCode: { type: String, default: '' },
+    guideName: { type: String, default: '' },
     grandTotal: { type: Number, required: true },
     amountReceived: { type: Number, required: true },
     changeAmount: { type: Number, required: true },

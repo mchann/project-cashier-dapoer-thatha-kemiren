@@ -12,7 +12,28 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginImage, setLoginImage] = useState('');
+  const [isImageLoading, setIsImageLoading] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.landingPage?.loginImage) {
+          setLoginImage(data.landingPage.loginImage);
+        } else {
+          setLoginImage('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1600&auto=format&fit=crop');
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        setLoginImage('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1600&auto=format&fit=crop');
+      })
+      .finally(() => {
+        setIsImageLoading(false);
+      });
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,36 +197,46 @@ export default function LoginPage() {
       </div>
 
       {/* RIGHT SIDE - Image Cover */}
-      <div className="hidden lg:block lg:w-1/2 relative p-4">
-        <div className={`w-full h-full relative rounded-3xl overflow-hidden border ${
+      <div className="hidden lg:block lg:w-1/2 relative">
+        <div className={`absolute inset-4 rounded-3xl overflow-hidden border ${
           isDarkMode ? 'border-[#e5d3b3]/10' : 'border-[#DCC7AA]'
         }`}>
-          <img
-            src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1600&auto=format&fit=crop"
-            alt="Restaurant Interior"
-            className="w-full h-full object-cover"
-          />
-          
-          {/* Glassmorphism Quote Overlay */}
-          <div className={`absolute bottom-12 left-12 right-12 backdrop-blur-md p-8 rounded-2xl shadow-2xl ${
-            isDarkMode 
-              ? 'bg-black/40 border border-white/10' 
-              : 'bg-[#F5E6CA]/60 border border-[#DCC7AA]/50'
-          }`}>
-            <p className={`text-lg leading-relaxed font-medium mb-6 ${
-              isDarkMode ? 'text-[#e5d3b3]' : 'text-[#4B3832]'
-            }`}>
-              &quot;Kenyamanan pelanggan berawal dari manajemen yang tertata rapi. Mari ciptakan harmoni dari dapur hingga ke meja.&quot;
-            </p>
-            <div>
-              <p className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-[#4B3832]'}`}>
-                Sistem Manajemen
-              </p>
-              <p className={`text-xs mt-1 ${isDarkMode ? 'text-[#e5d3b3]/80' : 'text-[#6F4E37]'}`}>
-                Dapoer Thatha Kemiren
-              </p>
+          {isImageLoading ? (
+            <div className={`w-full h-full flex flex-col items-center justify-center animate-pulse ${isDarkMode ? 'bg-[#222222]' : 'bg-[#e5d3b3]/30'}`}>
+              <div className={`w-16 h-16 rounded-full mb-4 ${isDarkMode ? 'bg-[#333333]' : 'bg-[#e5d3b3]/50'}`}></div>
+              <div className={`h-4 w-1/3 rounded mb-2 ${isDarkMode ? 'bg-[#333333]' : 'bg-[#e5d3b3]/50'}`}></div>
+              <div className={`h-3 w-1/4 rounded ${isDarkMode ? 'bg-[#333333]' : 'bg-[#e5d3b3]/50'}`}></div>
             </div>
-          </div>
+          ) : (
+            <>
+              <img
+                src={loginImage}
+                alt="Restaurant Interior"
+                className="w-full h-full object-cover"
+              />
+              
+              {/* Glassmorphism Quote Overlay */}
+              <div className={`absolute bottom-12 left-12 right-12 backdrop-blur-md p-8 rounded-2xl shadow-2xl ${
+                isDarkMode 
+                  ? 'bg-black/40 border border-white/10' 
+                  : 'bg-[#F5E6CA]/60 border border-[#DCC7AA]/50'
+              }`}>
+                <p className={`text-lg leading-relaxed font-medium mb-6 ${
+                  isDarkMode ? 'text-[#e5d3b3]' : 'text-[#4B3832]'
+                }`}>
+                  &quot;Kenyamanan pelanggan berawal dari manajemen yang tertata rapi. Mari ciptakan harmoni dari dapur hingga ke meja.&quot;
+                </p>
+                <div>
+                  <p className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-[#4B3832]'}`}>
+                    Sistem Manajemen
+                  </p>
+                  <p className={`text-xs mt-1 ${isDarkMode ? 'text-[#e5d3b3]/80' : 'text-[#6F4E37]'}`}>
+                    Dapoer Thatha Kemiren
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

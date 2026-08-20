@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Product, OrderItem, Order, Category } from '@/types/pos';
+import { AppliedGuideVoucher } from '@/components/pos/TravelPartnerSelector';
 import {
   DUMMY_CATEGORIES,
   DUMMY_PRODUCTS,
@@ -39,10 +40,7 @@ export default function POSPage() {
   const [dpAmount, setDpAmount] = useState<number>(0);
 
   // --- State Mitra Travel / Guide ---
-  const [isPartnerOrder, setIsPartnerOrder] = useState<boolean>(false);
-  const [selectedPartnerId, setSelectedPartnerId] = useState<string>('');
-  const [selectedPartnerName, setSelectedPartnerName] = useState<string>('');
-  const [guideCommission, setGuideCommission] = useState<number>(0);
+  const [guideVoucher, setGuideVoucher] = useState<AppliedGuideVoucher | null>(null);
 
   // --- State Modals ---
   const [isFakturModalOpen, setIsFakturModalOpen] = useState(false);
@@ -233,10 +231,7 @@ export default function POSPage() {
     setActiveOrderId(null);
     setCartItems([]);
     setDpAmount(0);
-    setIsPartnerOrder(false);
-    setSelectedPartnerId('');
-    setSelectedPartnerName('');
-    setGuideCommission(0);
+    setGuideVoucher(null);
     setPaymentMode('pay_now');
   }, []);
 
@@ -257,16 +252,16 @@ export default function POSPage() {
     setActiveOrderId(order._id);
     setPaymentMode('pay_now');
 
-    if (order.partnerId || order.guideCommission > 0) {
-      setIsPartnerOrder(true);
-      setSelectedPartnerId(order.partnerId || '');
-      setSelectedPartnerName(order.partnerName || '');
-      setGuideCommission(order.guideCommission || 0);
+    if (order.guideCode) {
+      setGuideVoucher({
+        code: order.guideCode,
+        guideName: order.guideName || 'Guide',
+        rewardType: order.discountAmount ? 'discount' : 'cashback',
+        amountType: 'nominal',
+        amount: order.discountAmount || order.guideCommission
+      });
     } else {
-      setIsPartnerOrder(false);
-      setSelectedPartnerId('');
-      setSelectedPartnerName('');
-      setGuideCommission(0);
+      setGuideVoucher(null);
     }
 
     setIsFakturModalOpen(false);
@@ -279,7 +274,17 @@ export default function POSPage() {
   const handleSaveFakturGantung = useCallback(async () => {
     if (cartItems.length === 0) return;
     const subtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
-    const grandTotal = Math.max(0, subtotal - dpAmount - guideCommission);
+    
+    let guideCommission = 0;
+    let discountAmount = 0;
+    if (guideVoucher) {
+      if (guideVoucher.rewardType === 'cashback') {
+        guideCommission = guideVoucher.amountType === 'percentage' ? (subtotal * guideVoucher.amount / 100) : guideVoucher.amount;
+      } else {
+        discountAmount = guideVoucher.amountType === 'percentage' ? (subtotal * guideVoucher.amount / 100) : guideVoucher.amount;
+      }
+    }
+    const grandTotal = Math.max(0, subtotal - dpAmount - discountAmount);
 
     try {
       const url = activeOrderId ? `/api/pos/transactions/${activeOrderId}` : '/api/pos/transactions';
@@ -293,7 +298,10 @@ export default function POSPage() {
         items: cartItems,
         subtotal,
         dpAmount,
+        discountAmount,
         guideCommission,
+        guideCode: guideVoucher?.code || '',
+        guideName: guideVoucher?.guideName || '',
         grandTotal,
         amountReceived: 0,
         changeAmount: 0,
@@ -321,7 +329,7 @@ export default function POSPage() {
     customerName,
     orderType,
     dpAmount,
-    guideCommission,
+    guideVoucher,
     activeOrderId,
     handleClearCart,
     fetchData,
@@ -333,7 +341,17 @@ export default function POSPage() {
     const handleConfirmPayment = useCallback(async (amountReceived: number, change: number) => {
     if (cartItems.length === 0) return;
     const subtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
-    const grandTotal = Math.max(0, subtotal - dpAmount - guideCommission);
+    
+    let guideCommission = 0;
+    let discountAmount = 0;
+    if (guideVoucher) {
+      if (guideVoucher.rewardType === 'cashback') {
+        guideCommission = guideVoucher.amountType === 'percentage' ? (subtotal * guideVoucher.amount / 100) : guideVoucher.amount;
+      } else {
+        discountAmount = guideVoucher.amountType === 'percentage' ? (subtotal * guideVoucher.amount / 100) : guideVoucher.amount;
+      }
+    }
+    const grandTotal = Math.max(0, subtotal - dpAmount - discountAmount);
 
     try {
       let res;
@@ -362,7 +380,10 @@ export default function POSPage() {
             items: cartItems,
             subtotal,
             dpAmount,
+            discountAmount,
             guideCommission,
+            guideCode: guideVoucher?.code || '',
+            guideName: guideVoucher?.guideName || '',
             grandTotal,
             amountReceived,
             changeAmount: change
@@ -388,7 +409,7 @@ export default function POSPage() {
     } catch (err: any) {
       alert(err.message);
     }
-  }, [cartItems, dpAmount, guideCommission, tableNumber, orderType, customerName, activeOrderId, showNotification, fetchData]);
+  }, [cartItems, dpAmount, guideVoucher, tableNumber, orderType, customerName, activeOrderId, showNotification, fetchData]);
 
   
   const handleCloseReceipt = () => {
@@ -452,6 +473,13 @@ export default function POSPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // --- Calculate Grand Total for Payment Modal ---
+  const calculatedSubtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
+  const calculatedDiscount = guideVoucher && guideVoucher.rewardType === 'discount'
+    ? (guideVoucher.amountType === 'percentage' ? calculatedSubtotal * guideVoucher.amount / 100 : guideVoucher.amount)
+    : 0;
+  const calculatedGrandTotal = Math.max(0, calculatedSubtotal - dpAmount - calculatedDiscount);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#FFFDF7]">
@@ -535,8 +563,9 @@ export default function POSPage() {
                 placeholder="Kode Pesanan (Cth: 1234)" 
                 value={pullCode}
                 onChange={(e) => setPullCode(e.target.value)}
-                className="flex-1 bg-white border-2 border-[#DCC7AA]/40 text-[#4B3832] px-4 py-2 rounded-xl font-medium outline-none focus:border-[#DCC7AA] transition-all uppercase"
-                maxLength={6}
+                className="flex-1 bg-white border-2 border-[#DCC7AA]/40 text-[#4B3832] px-4 py-2 rounded-xl font-medium outline-none focus:outline-none focus:ring-0 focus:border-[#8B7355] transition-all uppercase"
+                maxLength={4}
+                inputMode="numeric"
               />
               <button 
                 type="submit" 
@@ -555,21 +584,13 @@ export default function POSPage() {
               items={cartItems}
               paymentMode={paymentMode}
               dpAmount={dpAmount}
-              guideCommission={guideCommission}
-              partners={DUMMY_PARTNERS}
-              isPartnerOrder={isPartnerOrder}
-              selectedPartnerId={selectedPartnerId}
+              guideVoucher={guideVoucher}
               onChangeOrderType={setOrderType}
               onUpdateTableNumber={setTableNumber}
               onUpdateCustomerName={setCustomerName}
               onUpdateQuantity={handleUpdateQuantity}
               onChangePaymentMode={setPaymentMode}
-              onTogglePartner={setIsPartnerOrder}
-              onSelectPartner={(id, name) => {
-                setSelectedPartnerId(id);
-                setSelectedPartnerName(name);
-              }}
-              onChangeCommission={setGuideCommission}
+              onApplyVoucher={setGuideVoucher}
               onSaveFakturGantung={handleSaveFakturGantung}
               onPayNow={() => setIsPaymentModalOpen(true)}
               onOpenVoidModal={() => setIsVoidModalOpen(true)}
@@ -604,7 +625,7 @@ export default function POSPage() {
       {/* Payment Modal */}
       <PaymentModal
         isOpen={isPaymentModalOpen}
-        grandTotal={Math.max(0, cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0) - dpAmount - guideCommission)}
+        grandTotal={calculatedGrandTotal}
         onClose={() => setIsPaymentModalOpen(false)}
         onConfirmPayment={handleConfirmPayment}
       />

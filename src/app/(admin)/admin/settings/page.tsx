@@ -27,7 +27,8 @@ export default function SettingsPage() {
   const [landingPage, setLandingPage] = useState({
     heroImage: '',
     aboutImage: '',
-    aboutText: ''
+    aboutText: '',
+    loginImage: ''
   });
 
   const [pos, setPos] = useState({
@@ -79,7 +80,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleImageUpload = async (file: File, field: 'heroImage' | 'aboutImage') => {
+  const handleImageUpload = async (file: File, field: 'heroImage' | 'aboutImage' | 'loginImage') => {
     try {
       setIsSaving(true); // disable buttons while uploading
       const options = {
@@ -119,7 +120,7 @@ export default function SettingsPage() {
   if (isLoading) return <div className="p-8 text-center text-[#8B7355]">Memuat Pengaturan...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 p-6 pb-20">
       
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -136,10 +137,10 @@ export default function SettingsPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-[#DCC7AA]">
+      <div className="flex gap-2 border-b border-[#DCC7AA] overflow-x-auto w-full custom-scrollbar pb-1">
         <button
           onClick={() => setActiveTab('receipt')}
-          className={`px-6 py-3 font-bold text-sm transition-colors border-b-2 ${
+          className={`whitespace-nowrap shrink-0 px-6 py-3 font-bold text-sm transition-colors border-b-2 ${
             activeTab === 'receipt' 
               ? 'border-[#8B7355] text-[#4B3832]' 
               : 'border-transparent text-[#8B7355] hover:text-[#4B3832] hover:bg-[#F5E6CA]/50'
@@ -149,7 +150,7 @@ export default function SettingsPage() {
         </button>
         <button
           onClick={() => setActiveTab('landing')}
-          className={`px-6 py-3 font-bold text-sm transition-colors border-b-2 ${
+          className={`whitespace-nowrap shrink-0 px-6 py-3 font-bold text-sm transition-colors border-b-2 ${
             activeTab === 'landing' 
               ? 'border-[#8B7355] text-[#4B3832]' 
               : 'border-transparent text-[#8B7355] hover:text-[#4B3832] hover:bg-[#F5E6CA]/50'
@@ -159,7 +160,7 @@ export default function SettingsPage() {
         </button>
         <button
           onClick={() => setActiveTab('reservation')}
-          className={`px-6 py-3 font-bold text-sm transition-colors border-b-2 ${
+          className={`whitespace-nowrap shrink-0 px-6 py-3 font-bold text-sm transition-colors border-b-2 ${
             activeTab === 'reservation' 
               ? 'border-[#8B7355] text-[#4B3832]' 
               : 'border-transparent text-[#8B7355] hover:text-[#4B3832] hover:bg-[#F5E6CA]/50'
@@ -169,7 +170,7 @@ export default function SettingsPage() {
         </button>
         <button
           onClick={() => setActiveTab('pos')}
-          className={`px-6 py-3 font-bold text-sm transition-colors border-b-2 ${
+          className={`whitespace-nowrap shrink-0 px-6 py-3 font-bold text-sm transition-colors border-b-2 ${
             activeTab === 'pos' 
               ? 'border-[#8B7355] text-[#4B3832]' 
               : 'border-transparent text-[#8B7355] hover:text-[#4B3832] hover:bg-[#F5E6CA]/50'
@@ -320,6 +321,26 @@ export default function SettingsPage() {
                   className="w-full p-3 rounded-xl border border-[#DCC7AA] focus:ring-2 focus:ring-[#8B7355] focus:border-[#8B7355] outline-none leading-relaxed"
                   rows={4}
                 />
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-[#4B3832] border-b border-[#DCC7AA]/50 pb-2 mb-4">Gambar Background Halaman Login</h2>
+              <div className="flex flex-col md:flex-row gap-6 items-start mb-6">
+                <div className="flex-1 w-full">
+                  <label className="block text-sm font-bold text-[#8B7355] mb-2">Upload Foto Login</label>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'loginImage')}
+                    className="w-full p-3 rounded-xl border border-[#DCC7AA] focus:ring-2 focus:ring-[#8B7355] bg-gray-50"
+                  />
+                </div>
+                {landingPage.loginImage && (
+                  <div className="w-full md:w-1/3 rounded-xl overflow-hidden border border-[#DCC7AA] shadow-sm">
+                    <img src={landingPage.loginImage} alt="Login Preview" className="w-full h-32 object-cover" />
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -49,7 +49,10 @@ export interface Order {
   }[];
   subtotal: number;
   dpAmount: number;
+  discountAmount?: number;
   guideCommission: number;
+  guideCode?: string;
+  guideName?: string;
   grandTotal: number;
   amountReceived?: number;
   changeAmount?: number;

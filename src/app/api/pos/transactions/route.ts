@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import connectMongo from '@/lib/mongodb';
 import Transaction from '@/models/Transaction';
 import { Product } from '@/models/Product';
+import { GuideVoucher } from '@/models/GuideVoucher';
+import ActivityLog from '@/models/ActivityLog';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import mongoose from 'mongoose';
@@ -49,7 +51,10 @@ export async function POST(req: Request) {
       items,
       subtotal,
       dpAmount,
+      discountAmount,
       guideCommission,
+      guideCode,
+      guideName,
       grandTotal,
       amountReceived,
       changeAmount
@@ -95,6 +100,20 @@ export async function POST(req: Request) {
       }
     }));
 
+    // Cek stok habis untuk dilog
+    const stockLogs: any[] = [];
+    for (const item of items) {
+      const dbProduct = productsInDb.find((p) => p._id.toString() === item.productId.toString());
+      if (dbProduct && (dbProduct.stock - item.quantity <= 0)) {
+        stockLogs.push({
+          title: 'Stok Habis / Menipis',
+          message: `Stok menu ${item.name} habis setelah pesanan ini!`,
+          type: 'warning',
+          targetRole: 'admin'
+        });
+      }
+    }
+
     const bulkResult = await Product.bulkWrite(bulkOps);
 
     // Jika jumlah yang berhasil diupdate kurang dari jumlah jenis item, 
@@ -116,13 +135,55 @@ export async function POST(req: Request) {
       items,
       subtotal,
       dpAmount: dpAmount || 0,
+      discountAmount: discountAmount || 0,
       guideCommission: guideCommission || 0,
+      guideCode: guideCode || '',
+      guideName: guideName || '',
       grandTotal,
       amountReceived,
       changeAmount,
       cashierName: session.user.name || session.user.username || 'Kasir',
       cashierId: new mongoose.Types.ObjectId(session.user.id),
     });
+
+    // 5. Update Status Voucher jika menggunakan GuideCode
+    if (guideCode) {
+      await GuideVoucher.findOneAndUpdate(
+        { code: guideCode },
+        { 
+          status: 'used', 
+          usedAt: new Date(), 
+          transactionId: newTransaction._id 
+        }
+      );
+    }
+
+    // 5. Catat ke ActivityLog
+    const logsToCreate = [...stockLogs];
+    
+    // Log Transaksi
+    if (paymentStatus === 'paid') {
+      logsToCreate.push({
+        title: 'Pesanan Lunas',
+        message: `Kasir ${session.user.name || 'Kasir'} menyelesaikan pesanan ${invoiceNumber} sejumlah Rp ${grandTotal.toLocaleString('id-ID')}`,
+        type: 'success',
+        targetRole: 'admin'
+      });
+    }
+
+    // Log Komisi Guide
+    if (guideCommission > 0) {
+      logsToCreate.push({
+        title: 'Komisi Guide',
+        message: `Kasir ${session.user.name || 'Kasir'} mencatat Komisi Guide sebesar Rp ${guideCommission.toLocaleString('id-ID')} pada transaksi ${invoiceNumber}`,
+        type: 'info',
+        targetRole: 'admin'
+      });
+    }
+
+    if (logsToCreate.length > 0) {
+      await ActivityLog.insertMany(logsToCreate);
+    }
 
     return NextResponse.json(newTransaction, { status: 201 });
 

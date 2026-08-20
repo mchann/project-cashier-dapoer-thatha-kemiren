@@ -137,14 +137,22 @@ export default function Home() {
           <div className="hidden md:flex items-center gap-4">
             <button 
               onClick={toggleTheme}
-              className={`p-2 rounded-full border transition-colors ${
+              className={`p-2.5 rounded-full border transition-all duration-300 flex items-center justify-center ${
                 isDarkMode 
-                  ? 'border-[#e5d3b3]/30 hover:border-[#e5d3b3] text-[#e5d3b3]' 
-                  : 'border-[#DCC7AA] hover:border-[#4B3832] text-[#6F4E37]'
+                  ? 'border-[#e5d3b3]/30 hover:border-[#e5d3b3] text-[#e5d3b3] hover:bg-[#e5d3b3]/10' 
+                  : 'border-[#DCC7AA] hover:border-[#4B3832] text-[#6F4E37] hover:bg-[#6F4E37]/10'
               }`}
               title="Ganti Tema Warna"
             >
-              {isDarkMode ? '🌞' : '🌙'}
+              {isDarkMode ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
             </button>
             <Link 
               href="/login"
@@ -160,10 +168,15 @@ export default function Home() {
 
           {/* Mobile Burger Toggle */}
           <button 
-            className="md:hidden p-2"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            type="button"
+            className="md:hidden p-2 cursor-pointer relative z-[60] touch-manipulation"
+            onClick={(e) => {
+              e.preventDefault();
+              setIsMobileMenuOpen(!isMobileMenuOpen);
+            }}
+            aria-label="Toggle Mobile Menu"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {isMobileMenuOpen ? (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12" />
               ) : (
@@ -182,8 +195,17 @@ export default function Home() {
             <a href="#about" onClick={() => setIsMobileMenuOpen(false)} className="text-xs uppercase tracking-[0.2em]">Tentang Kami</a>
             <a href="#menu" onClick={() => setIsMobileMenuOpen(false)} className="text-xs uppercase tracking-[0.2em]">Menu</a>
             <Link href="/reservasi" onClick={() => setIsMobileMenuOpen(false)} className="text-xs uppercase tracking-[0.2em] font-bold">Reservasi</Link>
-            <button onClick={() => { toggleTheme(); setIsMobileMenuOpen(false); }} className="text-xs uppercase tracking-[0.2em]">
-              Mode: {isDarkMode ? 'Terang' : 'Gelap'}
+            <button onClick={() => { toggleTheme(); setIsMobileMenuOpen(false); }} className="text-xs uppercase tracking-[0.2em] flex items-center gap-2">
+              <span>Ganti Tema</span>
+              {isDarkMode ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
             </button>
             <Link href="/login" className={`text-xs uppercase tracking-[0.2em] px-8 py-3 border ${
                 isDarkMode ? 'border-[#e5d3b3]' : 'border-[#4B3832]'

@@ -277,11 +277,12 @@ function ProductForm({
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#6F4E37]">Rp</span>
                 <input
                   id="prod-price"
-                  type="number"
-                  min={0}
-                  step={500}
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                  type="text"
+                  value={price ? new Intl.NumberFormat('id-ID').format(Number(price)) : ''}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setPrice(val === '' ? '' : Number(val));
+                  }}
                   placeholder="0"
                   className="w-full bg-transparent border border-[#DCC7AA] rounded-2xl pl-12 pr-4 py-3 text-sm font-semibold text-[#4B3832] focus:border-[#6F4E37] focus:ring-1 focus:ring-[#6F4E37] outline-none transition-all placeholder:text-[#DCC7AA]"
                 />

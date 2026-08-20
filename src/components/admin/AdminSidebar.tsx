@@ -1,7 +1,7 @@
 // src/components/admin/AdminSidebar.tsx
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -12,13 +12,29 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
+    'Riwayat': true
+  });
+
+  const toggleMenu = (menuName: string) => {
+    setOpenMenus(prev => ({ ...prev, [menuName]: !prev[menuName] }));
+  };
 
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: DashboardIcon },
+    { name: 'Laporan Keuangan', href: '/admin/reports', icon: ReportIcon },
+    { name: 'Pengeluaran', href: '/admin/expenses', icon: ExpenseIcon },
+    { 
+      name: 'Riwayat', 
+      icon: HistoryIcon,
+      subItems: [
+        { name: 'Riwayat Pesanan', href: '/admin/history' },
+        { name: 'Log Aktivitas', href: '/admin/activity-logs' }
+      ]
+    },
     { name: 'Kelola Menu', href: '/admin/menu', icon: MenuIcon },
     { name: 'Kelola Staff', href: '/admin/staff', icon: UsersIcon },
-    { name: 'Pengeluaran', href: '/admin/expenses', icon: ExpenseIcon },
-    { name: 'Laporan Keuangan', href: '/admin/reports', icon: ReportIcon },
+    { name: 'Manajemen Guide', href: '/admin/guides', icon: UsersIcon },
     { name: 'Pengaturan', href: '/admin/settings', icon: SettingsIcon },
   ];
 
@@ -54,7 +70,52 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
         </div>
 
         {navigation.map((item) => {
-          // Khusus menu admin, anggap aktif jika url sama, atau jika url "/admin" redirect ke "/admin/menu"
+          if (item.subItems) {
+            const isAnySubActive = item.subItems.some(sub => pathname === sub.href);
+            const isOpen = openMenus[item.name];
+
+            return (
+              <div key={item.name} className="flex flex-col gap-1">
+                <button
+                  onClick={() => toggleMenu(item.name)}
+                  className={`flex items-center justify-between px-4 py-3 rounded-xl font-semibold transition-all ${
+                    isAnySubActive
+                      ? 'bg-[#4B3832]/5 text-[#4B3832]'
+                      : 'text-[#6F4E37] hover:bg-[#F5E6CA] hover:text-[#4B3832]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className={`w-5 h-5 ${isAnySubActive ? 'text-[#4B3832]' : 'text-[#6F4E37]'}`} />
+                    <span className="text-sm">{item.name}</span>
+                  </div>
+                  <svg 
+                    className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {isOpen && (
+                  <div className="flex flex-col gap-1 pl-12 pr-4 py-1">
+                    {item.subItems.map(sub => (
+                      <Link
+                        key={sub.name}
+                        href={sub.href}
+                        className={`text-sm font-semibold py-2 transition-colors ${
+                          pathname === sub.href ? 'text-[#4B3832] font-black' : 'text-[#8B7355] hover:text-[#4B3832]'
+                        }`}
+                      >
+                        {sub.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // Normal Item
           const isActive =
             pathname === item.href ||
             (item.href === '/admin/menu' && pathname === '/admin');
@@ -62,7 +123,7 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
           return (
             <Link
               key={item.name}
-              href={item.href}
+              href={item.href!}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold transition-all ${
                 isActive
                   ? 'bg-[#4B3832] text-[#FFFDF7] shadow-sm'
@@ -141,10 +202,18 @@ function LogoutIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-function CloseIcon(props: React.SVGProps<SVGSVGElement>) {
+function CloseIcon({ className }: { className?: string }) {
   return (
-    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" {...props}>
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+function HistoryIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   );
 }

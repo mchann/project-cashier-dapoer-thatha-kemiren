@@ -274,19 +274,21 @@ export default function ReportsPage() {
 
       {/* Tabs for Details */}
       <div className="bg-white rounded-3xl border border-[#DCC7AA] overflow-hidden shadow-sm">
-        <div className="flex border-b border-[#DCC7AA]">
-          <button 
-            onClick={() => setActiveTab('transactions')}
-            className={`flex-1 py-4 text-sm font-black tracking-widest uppercase transition-colors ${activeTab === 'transactions' ? 'bg-[#FFFDF7] text-[#4B3832] border-b-2 border-[#4B3832]' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
-          >
-            Data Transaksi (Pemasukan)
-          </button>
-          <button 
-            onClick={() => setActiveTab('expenses')}
-            className={`flex-1 py-4 text-sm font-black tracking-widest uppercase transition-colors ${activeTab === 'expenses' ? 'bg-[#FFFDF7] text-[#4B3832] border-b-2 border-[#4B3832]' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
-          >
-            Data Belanja (Pengeluaran)
-          </button>
+        <div className="p-4 border-b border-[#DCC7AA] flex justify-center md:justify-start">
+          <div className="flex w-full md:w-auto gap-1 bg-gray-100 p-1 rounded-xl shadow-inner shrink-0">
+            <button 
+              onClick={() => setActiveTab('transactions')}
+              className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-black transition-all ${activeTab === 'transactions' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Data Transaksi (Pemasukan)
+            </button>
+            <button 
+              onClick={() => setActiveTab('expenses')}
+              className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-black transition-all ${activeTab === 'expenses' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Data Belanja (Pengeluaran)
+            </button>
+          </div>
         </div>
 
         <div className="p-0 overflow-x-auto">

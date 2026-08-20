@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { OrderItem, Partner } from '@/types/pos';
-import { TravelPartnerSelector } from './TravelPartnerSelector';
+import { OrderItem } from '@/types/pos';
+import { TravelPartnerSelector, AppliedGuideVoucher } from './TravelPartnerSelector';
 
 interface OrderCartProps {
   orderType: 'dine_in' | 'takeaway';
@@ -12,18 +12,13 @@ interface OrderCartProps {
   items: OrderItem[];
   paymentMode: 'pay_now' | 'save_faktur';
   dpAmount: number;
-  guideCommission: number;
-  partners: Partner[];
-  isPartnerOrder: boolean;
-  selectedPartnerId: string;
+  guideVoucher: AppliedGuideVoucher | null;
   onChangeOrderType: (type: 'dine_in' | 'takeaway') => void;
   onUpdateTableNumber: (val: string) => void;
   onUpdateCustomerName: (val: string) => void;
   onUpdateQuantity: (productId: string, delta: number) => void;
   onChangePaymentMode: (mode: 'pay_now' | 'save_faktur') => void;
-  onTogglePartner: (checked: boolean) => void;
-  onSelectPartner: (partnerId: string, partnerName: string) => void;
-  onChangeCommission: (commission: number) => void;
+  onApplyVoucher: (voucher: AppliedGuideVoucher | null) => void;
   onSaveFakturGantung: () => void;
   onPayNow: () => void;
   onOpenVoidModal: () => void;
@@ -37,18 +32,13 @@ export function OrderCart({
   items,
   paymentMode,
   dpAmount,
-  guideCommission,
-  partners,
-  isPartnerOrder,
-  selectedPartnerId,
+  guideVoucher,
   onChangeOrderType,
   onUpdateTableNumber,
   onUpdateCustomerName,
   onUpdateQuantity,
   onChangePaymentMode,
-  onTogglePartner,
-  onSelectPartner,
-  onChangeCommission,
+  onApplyVoucher,
   onSaveFakturGantung,
   onPayNow,
   onOpenVoidModal,
@@ -57,7 +47,18 @@ export function OrderCart({
   const [isTravelModalOpen, setIsTravelModalOpen] = useState(false);
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const grandTotal = Math.max(0, subtotal - dpAmount - guideCommission);
+  
+  let guideCommission = 0;
+  let discountAmount = 0;
+  if (guideVoucher) {
+    if (guideVoucher.rewardType === 'cashback') {
+      guideCommission = guideVoucher.amountType === 'percentage' ? (subtotal * guideVoucher.amount / 100) : guideVoucher.amount;
+    } else {
+      discountAmount = guideVoucher.amountType === 'percentage' ? (subtotal * guideVoucher.amount / 100) : guideVoucher.amount;
+    }
+  }
+  
+  const grandTotal = Math.max(0, subtotal - dpAmount - discountAmount);
 
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -89,9 +90,9 @@ export function OrderCart({
               type="button"
               onClick={() => setIsTravelModalOpen(true)}
               className={`h-9 px-3 flex items-center justify-center rounded-xl border border-[#DCC7AA] transition-colors shadow-sm ${
-                (selectedPartnerId.trim() !== '' || guideCommission > 0) ? 'bg-[#4B3832] text-[#FFFDF7]' : 'bg-[#FFFDF7] text-[#6F4E37] hover:bg-[#F5E6CA]'
+                (guideVoucher) ? 'bg-[#4B3832] text-[#FFFDF7]' : 'bg-[#FFFDF7] text-[#6F4E37] hover:bg-[#F5E6CA]'
               }`}
-              title="Mitra Agen / Tour Guide"
+              title="Voucher Guide"
             >
               <span className="text-[10px] font-black uppercase tracking-wider">Guide</span>
             </button>
@@ -275,10 +276,16 @@ export function OrderCart({
                 <span className="font-bold">- {formatRupiah(dpAmount)}</span>
               </div>
             )}
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-[#22c55e]">
+                <span>Diskon Guide</span>
+                <span className="font-bold">- {formatRupiah(discountAmount)}</span>
+              </div>
+            )}
             {guideCommission > 0 && (
               <div className="flex justify-between text-[#ef4444]">
-                <span>Komisi Guide</span>
-                <span className="font-bold">- {formatRupiah(guideCommission)}</span>
+                <span>Cashback Guide (K)</span>
+                <span className="font-bold">({formatRupiah(guideCommission)})</span>
               </div>
             )}
             <div className="pt-2 border-t border-[#DCC7AA]/30 flex justify-between items-center mt-1">
@@ -333,13 +340,9 @@ export function OrderCart({
             </div>
             <div className="p-5">
               <TravelPartnerSelector
-                partners={partners}
-                isPartnerOrder={isPartnerOrder}
-                selectedPartnerId={selectedPartnerId}
-                guideCommission={guideCommission}
-                onTogglePartner={onTogglePartner}
-                onSelectPartner={onSelectPartner}
-                onChangeCommission={onChangeCommission}
+                appliedVoucher={guideVoucher}
+                onApplyVoucher={onApplyVoucher}
+                onClose={() => setIsTravelModalOpen(false)}
               />
               <button 
                 type="button"

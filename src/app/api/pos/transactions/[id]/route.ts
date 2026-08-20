@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectMongo from '@/lib/mongodb';
 import Transaction from '@/models/Transaction';
 import { Product } from '@/models/Product';
+import ActivityLog from '@/models/ActivityLog';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
@@ -132,6 +133,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (voidedDiff.length > 0) {
       if (!transaction.voidedItems) transaction.voidedItems = [];
       transaction.voidedItems.push(...voidedDiff);
+
+      const itemsStr = voidedDiff.map(i => `${i.quantity}x ${i.name}`).join(', ');
+      await ActivityLog.create({
+        title: 'Pembatalan Item',
+        message: `Kasir ${session.user.name || 'Kasir'} mengurangi/membatalkan item: ${itemsStr} di nota ${transaction.invoiceNumber}`,
+        type: 'warning',
+        targetRole: 'admin'
+      });
     }
 
     transaction.items = newItems;
@@ -182,6 +191,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     }
 
     await Transaction.findByIdAndDelete(transactionId);
+
+    await ActivityLog.create({
+      title: 'Batal Transaksi / Void',
+      message: `Kasir ${session.user.name || 'Kasir'} membatalkan keseluruhan nota ${transaction.invoiceNumber}`,
+      type: 'danger',
+      targetRole: 'admin'
+    });
 
     return NextResponse.json({ message: 'Transaksi berhasil dihapus' });
   } catch (error: any) {
