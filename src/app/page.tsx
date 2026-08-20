@@ -54,8 +54,37 @@ const LANDING_DATA = {
 };
 
 export default function Home() {
-  const [isDarkMode, setIsDarkMode] = useState(true); // Default to dark mode (elegant)
+      const [isDarkMode, setIsDarkMode] = useState(true); // Default to dark mode (elegant)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [settings, setSettings] = useState<any>(null);
+  const [products, setProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const sliderRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/settings').then(res => res.json()).catch(() => ({})),
+      fetch('/api/admin/products').then(res => res.json()).catch(() => [])
+    ]).then(([dataSettings, dataProducts]) => {
+      if (dataSettings && dataSettings.landingPage) {
+        setSettings(dataSettings.landingPage);
+      }
+      if (Array.isArray(dataProducts)) {
+        setProducts(dataProducts.filter(p => p.isAvailable).slice(0, 8));
+      }
+    }).finally(() => {
+      setIsLoading(false);
+    });
+  }, []);
+
+  const slideLeft = () => {
+    if(sliderRef.current) sliderRef.current.scrollBy({ left: -350, behavior: 'smooth' });
+  };
+  const slideRight = () => {
+    if(sliderRef.current) sliderRef.current.scrollBy({ left: 350, behavior: 'smooth' });
+  };
+
+
 
   // Toggle Theme Function
   const toggleTheme = () => {
@@ -101,20 +130,29 @@ export default function Home() {
             <a href="#" className={`hover:${isDarkMode ? 'text-[#e5d3b3]' : 'text-[#4B3832]'} transition-colors`}>Beranda</a>
             <a href="#about" className={`hover:${isDarkMode ? 'text-[#e5d3b3]' : 'text-[#4B3832]'} transition-colors`}>Tentang Kami</a>
             <a href="#menu" className={`hover:${isDarkMode ? 'text-[#e5d3b3]' : 'text-[#4B3832]'} transition-colors`}>Menu</a>
+            <Link href="/reservasi" className={`hover:${isDarkMode ? 'text-[#e5d3b3]' : 'text-[#4B3832]'} transition-colors font-bold`}>Reservasi</Link>
             <a href="#testimonials" className={`hover:${isDarkMode ? 'text-[#e5d3b3]' : 'text-[#4B3832]'} transition-colors`}>Testimoni</a>
           </div>
 
           <div className="hidden md:flex items-center gap-4">
             <button 
               onClick={toggleTheme}
-              className={`p-2 rounded-full border transition-colors ${
+              className={`p-2.5 rounded-full border transition-all duration-300 flex items-center justify-center ${
                 isDarkMode 
-                  ? 'border-[#e5d3b3]/30 hover:border-[#e5d3b3] text-[#e5d3b3]' 
-                  : 'border-[#DCC7AA] hover:border-[#4B3832] text-[#6F4E37]'
+                  ? 'border-[#e5d3b3]/30 hover:border-[#e5d3b3] text-[#e5d3b3] hover:bg-[#e5d3b3]/10' 
+                  : 'border-[#DCC7AA] hover:border-[#4B3832] text-[#6F4E37] hover:bg-[#6F4E37]/10'
               }`}
               title="Ganti Tema Warna"
             >
-              {isDarkMode ? '🌞' : '🌙'}
+              {isDarkMode ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
             </button>
             <Link 
               href="/login"
@@ -130,10 +168,15 @@ export default function Home() {
 
           {/* Mobile Burger Toggle */}
           <button 
-            className="md:hidden p-2"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            type="button"
+            className="md:hidden p-2 cursor-pointer relative z-[60] touch-manipulation"
+            onClick={(e) => {
+              e.preventDefault();
+              setIsMobileMenuOpen(!isMobileMenuOpen);
+            }}
+            aria-label="Toggle Mobile Menu"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {isMobileMenuOpen ? (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12" />
               ) : (
@@ -151,8 +194,18 @@ export default function Home() {
             <a href="#" onClick={() => setIsMobileMenuOpen(false)} className="text-xs uppercase tracking-[0.2em]">Beranda</a>
             <a href="#about" onClick={() => setIsMobileMenuOpen(false)} className="text-xs uppercase tracking-[0.2em]">Tentang Kami</a>
             <a href="#menu" onClick={() => setIsMobileMenuOpen(false)} className="text-xs uppercase tracking-[0.2em]">Menu</a>
-            <button onClick={() => { toggleTheme(); setIsMobileMenuOpen(false); }} className="text-xs uppercase tracking-[0.2em]">
-              Mode: {isDarkMode ? 'Terang' : 'Gelap'}
+            <Link href="/reservasi" onClick={() => setIsMobileMenuOpen(false)} className="text-xs uppercase tracking-[0.2em] font-bold">Reservasi</Link>
+            <button onClick={() => { toggleTheme(); setIsMobileMenuOpen(false); }} className="text-xs uppercase tracking-[0.2em] flex items-center gap-2">
+              <span>Ganti Tema</span>
+              {isDarkMode ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
             </button>
             <Link href="/login" className={`text-xs uppercase tracking-[0.2em] px-8 py-3 border ${
                 isDarkMode ? 'border-[#e5d3b3]' : 'border-[#4B3832]'
@@ -167,11 +220,15 @@ export default function Home() {
       <section className="relative w-full h-[90vh] flex flex-col items-center justify-center text-center px-4 overflow-hidden">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
-          <img 
-            src={LANDING_DATA.heroImage} 
-            alt="Dapoer Thatha Kemiren" 
-            className="w-full h-full object-cover"
-          />
+          {isLoading ? (
+            <div className={`w-full h-full animate-pulse ${isDarkMode ? 'bg-[#222]' : 'bg-[#DCC7AA]/50'}`} />
+          ) : (
+            <img 
+              src={(settings?.heroImage || LANDING_DATA.heroImage)} 
+              alt="Dapoer Thatha Kemiren" 
+              className="w-full h-full object-cover"
+            />
+          )}
           <div className={`absolute inset-0 ${
             isDarkMode ? 'bg-black/70' : 'bg-[#F5E6CA]/60 backdrop-blur-sm'
           }`} />
@@ -182,11 +239,11 @@ export default function Home() {
             EST. 2024 • KULINER OTENTIK
           </p>
           <h1 className="text-4xl md:text-5xl lg:text-7xl font-serif font-light leading-tight mb-8">
-            Simfoni Cita Rasa <br className="hidden md:block" />
-            <span className={isDarkMode ? 'text-[#e5d3b3]' : 'text-[#6F4E37]'}>Nusantara dalam Setiap Suapan</span>
+            Rasa Otentik Banyuwangi <br className="hidden md:block" />
+            <span className={isDarkMode ? 'text-[#e5d3b3]' : 'text-[#6F4E37]'}>Warisan Desa Kemiren</span>
           </h1>
           <p className="text-[9px] md:text-[11px] uppercase tracking-[0.2em] mb-12 max-w-xl mx-auto leading-loose">
-            Perjalanan kuliner melalui warisan gastronomi Nusantara dan kekayaan rempah desa adat Kemiren.
+            Menikmati kekayaan rempah dan resep warisan desa adat Kemiren yang disajikan istimewa untuk Anda.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -197,13 +254,13 @@ export default function Home() {
             }`}>
               Eksplorasi Menu
             </a>
-            <a href="#testimonials" className={`text-xs uppercase tracking-[0.2em] px-8 py-4 border transition-colors ${
+            <Link href="/reservasi" className={`text-xs uppercase tracking-[0.2em] px-8 py-4 border transition-colors ${
               isDarkMode 
                 ? 'border-[#e5d3b3]/50 hover:border-[#e5d3b3]' 
                 : 'border-[#4B3832] hover:bg-[#4B3832] hover:text-[#FFFDF7]'
             }`}>
               Reservasi Sekarang
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -253,7 +310,7 @@ export default function Home() {
       <section id="about" className="flex flex-col md:flex-row w-full min-h-[70vh]">
         <div className="w-full md:w-1/2 min-h-[400px] relative">
           <img 
-            src={LANDING_DATA.philosophyImage} 
+            src={(settings?.aboutImage || LANDING_DATA.philosophyImage)} 
             alt="Dapoer Thatha Philosophy" 
             className="w-full h-full object-cover absolute inset-0"
           />
@@ -268,9 +325,17 @@ export default function Home() {
             <h2 className="text-4xl md:text-5xl font-serif mb-8 leading-tight">
               Cerita Dapoer Thatha Kemiren
             </h2>
-            <p className={`text-sm leading-relaxed mb-6 ${isDarkMode ? 'text-[#e5d3b3]/80' : 'text-[#6F4E37]'}`}>
-              Di Dapoer Thatha, kami percaya bahwa bumbu terbaik dalam setiap masakan adalah keikhlasan. Dapur kami didirikan dengan satu keyakinan sederhana — bahwa makanan yang disiapkan dengan dedikasi, bersumber dari alam lokal, dan disajikan dengan senyuman hangat dapat mengubah sebuah hidangan menjadi kenangan.
-            </p>
+            {isLoading ? (
+              <div className="space-y-4 mb-6">
+                <div className={`h-4 w-full animate-pulse rounded ${isDarkMode ? 'bg-[#333]' : 'bg-[#DCC7AA]/50'}`} />
+                <div className={`h-4 w-5/6 animate-pulse rounded ${isDarkMode ? 'bg-[#333]' : 'bg-[#DCC7AA]/50'}`} />
+                <div className={`h-4 w-4/6 animate-pulse rounded ${isDarkMode ? 'bg-[#333]' : 'bg-[#DCC7AA]/50'}`} />
+              </div>
+            ) : (
+              <p className={`text-sm leading-relaxed mb-6 ${isDarkMode ? 'text-[#e5d3b3]/80' : 'text-[#6F4E37]'}`}>
+                {settings?.aboutText || LANDING_DATA.philosophyImage ? (settings?.aboutText || 'Di Dapoer Thatha, kami percaya bahwa bumbu terbaik dalam setiap masakan adalah keikhlasan. Dapur kami didirikan dengan satu keyakinan sederhana — bahwa makanan yang disiapkan dengan dedikasi, bersumber dari alam lokal, dan disajikan dengan senyuman hangat dapat mengubah sebuah hidangan menjadi kenangan.') : ''}
+              </p>
+            )}
             <p className={`text-sm leading-relaxed mb-10 ${isDarkMode ? 'text-[#e5d3b3]/80' : 'text-[#6F4E37]'}`}>
               Chef kami memadukan tradisi leluhur Nusantara dengan sentuhan rasa modern, menghasilkan hidangan yang akrab di lidah namun selalu memberikan kejutan yang memikat di setiap suapannya.
             </p>
@@ -294,24 +359,59 @@ export default function Home() {
             <h2 className="text-4xl md:text-5xl font-serif">Hidangan Signature</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {LANDING_DATA.signatureDishes.map((dish) => (
-              <div key={dish.id} className="relative group overflow-hidden h-[500px]">
-                <img 
-                  src={dish.image} 
-                  alt={dish.name}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className={`absolute inset-0 bg-gradient-to-t ${
-                  isDarkMode ? 'from-black/90 via-black/20' : 'from-[#4B3832]/90 via-transparent'
-                } to-transparent`} />
-                <div className="absolute bottom-0 left-0 w-full p-8 flex flex-col justify-end text-[#FFFDF7]">
-                  <p className="text-[9px] uppercase tracking-[0.2em] mb-2 opacity-80">{dish.category}</p>
-                  <h3 className="text-2xl font-serif mb-2">{dish.name}</h3>
-                  <p className="text-lg">{dish.price}</p>
+          
+          {/* Tombol Geser (Desktop) */}
+          <div className="flex justify-end gap-4 mb-6 hidden md:flex">
+             <button onClick={slideLeft} className={`p-4 rounded-full border transition-colors ${
+                isDarkMode ? 'border-[#e5d3b3]/30 text-[#e5d3b3] hover:bg-[#e5d3b3] hover:text-[#111]' : 'border-[#6F4E37]/30 text-[#6F4E37] hover:bg-[#6F4E37] hover:text-[#FFFDF7]'
+             }`}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
+             </button>
+             <button onClick={slideRight} className={`p-4 rounded-full border transition-colors ${
+                isDarkMode ? 'border-[#e5d3b3]/30 text-[#e5d3b3] hover:bg-[#e5d3b3] hover:text-[#111]' : 'border-[#6F4E37]/30 text-[#6F4E37] hover:bg-[#6F4E37] hover:text-[#FFFDF7]'
+             }`}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+             </button>
+          </div>
+
+          {/* Slider Container */}
+          <div 
+             ref={sliderRef}
+             className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-8 hide-scrollbar"
+          >
+            {isLoading ? (
+              [1, 2, 3].map((_, idx) => (
+                <div key={idx} className={`relative overflow-hidden h-[500px] w-[85vw] md:w-[350px] shrink-0 snap-center animate-pulse rounded-xl ${isDarkMode ? 'bg-[#222]' : 'bg-[#DCC7AA]/30'}`}>
+                  <div className="absolute bottom-0 left-0 w-full p-8 space-y-4">
+                    <div className={`h-3 w-1/3 rounded ${isDarkMode ? 'bg-[#444]' : 'bg-[#DCC7AA]/60'}`} />
+                    <div className={`h-6 w-3/4 rounded ${isDarkMode ? 'bg-[#444]' : 'bg-[#DCC7AA]/60'}`} />
+                    <div className={`h-5 w-1/2 rounded ${isDarkMode ? 'bg-[#444]' : 'bg-[#DCC7AA]/60'}`} />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              (products.length > 0 ? products : LANDING_DATA.signatureDishes).map((dish: any) => (
+                <div key={dish.id || dish._id} className="relative group overflow-hidden h-[500px] w-[85vw] md:w-[350px] shrink-0 snap-center">
+                  <img 
+                    src={dish.image} 
+                    alt={dish.name}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className={`absolute inset-0 bg-gradient-to-t ${
+                    isDarkMode ? 'from-black/90 via-black/20' : 'from-[#4B3832]/90 via-transparent'
+                  } to-transparent`} />
+                  <div className="absolute bottom-0 left-0 w-full p-8 flex flex-col justify-end text-[#FFFDF7]">
+                    <p className="text-[9px] uppercase tracking-[0.2em] mb-2 opacity-80">
+                       {dish.category?.name || dish.category || 'MENU'}
+                    </p>
+                    <h3 className="text-2xl font-serif mb-2">{dish.name}</h3>
+                    <p className="text-lg">
+                       {dish.price ? `Rp ${Number(dish.price).toLocaleString('id-ID')}` : '-'}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="mt-16 text-center">
@@ -409,7 +509,7 @@ export default function Home() {
             <h4 className="uppercase tracking-[0.2em] mb-6 font-bold">Lokasi Kami</h4>
             <div className="w-full h-32 rounded-lg overflow-hidden border border-[#DCC7AA]/30">
               <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3948.889397941018!2d114.32986291478143!3d-8.213853194089332!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2dd15ab6b001a1bd%3A0xc3b62f1c84f5068!2sDapoer%20Thatha%20Kemiren!5e0!3m2!1sen!2sid!4v1700000000000!5m2!1sen!2sid" 
+                src="https://maps.google.com/maps?q=Dapoer%20Thatha%20Kemiren%20Osing%20Food&t=&z=15&ie=UTF8&iwloc=&output=embed" 
                 width="100%" 
                 height="100%" 
                 style={{ border: 0 }} 

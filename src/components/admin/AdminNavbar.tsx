@@ -1,8 +1,11 @@
 // src/components/admin/AdminNavbar.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { signOut } from 'next-auth/react';
+import { NotificationBell } from '@/components/shared/NotificationBell';
+import { AdminFakturGantungModal } from './AdminFakturGantungModal';
 
 interface AdminNavbarProps {
   ownerName?: string;
@@ -10,7 +13,22 @@ interface AdminNavbarProps {
 }
 
 export function AdminNavbar({ ownerName = 'Bapak / Ibu Owner', onMenuClick }: AdminNavbarProps) {
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isFakturModalOpen, setIsFakturModalOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', handleClickOutside);
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
+    <>
     <header className="bg-[#FFFDF7]/90 backdrop-blur-md px-4 md:px-8 py-4 border-b border-[#DCC7AA] flex items-center justify-between gap-4 sticky top-0 z-30">
       {/* Kiri: Tombol Hamburger (Mobile) & Search Bar */}
       <div className="flex-1 flex items-center gap-4">
@@ -35,31 +53,75 @@ export function AdminNavbar({ ownerName = 'Bapak / Ibu Owner', onMenuClick }: Ad
       </div>
 
       {/* Aksi Kanan (Profile & POS Button) */}
-      <div className="flex items-center gap-5">
-        <Link
-          href="/pos"
-          className="hidden sm:inline-flex items-center gap-2 bg-[#FFFDF7] hover:bg-[#F5E6CA] text-[#4B3832] font-semibold px-5 py-2.5 rounded-full border border-[#DCC7AA] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-[#6F4E37] cursor-pointer transition-all text-sm"
-          title="Buka Layar Kasir (POS)"
+      <div className="flex items-center gap-3 md:gap-5">
+        <NotificationBell role="admin" />
+        <button
+          onClick={() => setIsFakturModalOpen(true)}
+          className="inline-flex items-center gap-2 bg-[#FFFDF7] hover:bg-[#F5E6CA] text-[#4B3832] font-semibold px-3 sm:px-5 py-2 sm:py-2.5 rounded-full border border-[#DCC7AA] shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:border-[#6F4E37] cursor-pointer transition-all text-sm"
+          title="Check Faktur Gantung"
         >
           <PosIcon className="w-4 h-4 text-[#6F4E37]" />
-          <span>Layar POS</span>
-        </Link>
+          <span className="hidden sm:inline">Check Faktur Gantung</span>
+        </button>
 
         <div className="w-px h-8 bg-[#DCC7AA] hidden sm:block" aria-hidden="true" />
 
-        <div className="flex items-center gap-3 cursor-pointer group">
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold text-[#4B3832] leading-tight group-hover:text-[#6F4E37] transition-colors">
-              {ownerName}
-            </p>
-            <p className="text-[11px] font-bold text-[#6F4E37] uppercase tracking-wider">Superadmin</p>
+        <div className="relative" ref={profileRef}>
+          <div 
+            className="flex items-center gap-3 cursor-pointer group"
+            onClick={() => setIsProfileOpen(!isProfileOpen)}
+          >
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-bold text-[#4B3832] leading-tight group-hover:text-[#6F4E37] transition-colors">
+                {ownerName}
+              </p>
+              <p className="text-[11px] font-bold text-[#6F4E37] uppercase tracking-wider">Superadmin</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-[#6F4E37] text-[#FFFDF7] flex items-center justify-center font-black shadow-md shadow-[#6F4E37]/20 border border-[#DCC7AA] transition-transform group-hover:scale-105">
+              O
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-[#6F4E37] text-[#FFFDF7] flex items-center justify-center font-black shadow-md shadow-[#6F4E37]/20 border border-[#DCC7AA]">
-            O
-          </div>
+
+          {/* Dropdown Menu */}
+          {isProfileOpen && (
+            <div className="absolute right-0 mt-3 w-56 bg-[#FFFDF7] rounded-2xl shadow-xl border border-[#DCC7AA] py-2 z-50 animate-in fade-in slide-in-from-top-2">
+              <div className="px-4 py-3 border-b border-[#DCC7AA]/50 sm:hidden">
+                <p className="text-sm font-bold text-[#4B3832] truncate">{ownerName}</p>
+                <p className="text-[11px] font-bold text-[#6F4E37] uppercase">Superadmin</p>
+              </div>
+              
+              <Link 
+                href="/"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-[#4B3832] hover:bg-[#F5E6CA] transition-colors"
+                onClick={() => setIsProfileOpen(false)}
+              >
+                <svg className="w-4 h-4 text-[#6F4E37]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                Ke Halaman Utama
+              </Link>
+              
+              <div className="h-px bg-[#DCC7AA]/50 my-1"></div>
+              
+              <button
+                onClick={() => {
+                  setIsProfileOpen(false);
+                  signOut({ callbackUrl: '/login' });
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                Logout / Keluar
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
+
+      <AdminFakturGantungModal 
+        isOpen={isFakturModalOpen} 
+        onClose={() => setIsFakturModalOpen(false)} 
+      />
+    </>
   );
 }
 

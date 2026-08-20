@@ -26,11 +26,12 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  savedQuantity?: number;
   notes?: string;
 }
 
 export type OrderType = 'dine_in' | 'takeaway' | 'reservation' | 'qr_order';
-export type PaymentStatus = 'unpaid' | 'dp_paid' | 'paid';
+export type PaymentStatus = 'unpaid' | 'dp_paid' | 'paid' | 'void';
 
 export interface Order {
   _id: string;
@@ -40,13 +41,26 @@ export interface Order {
   orderType: OrderType;
   paymentStatus: PaymentStatus;
   items: OrderItem[];
+  voidedItems?: {
+    name: string;
+    quantity: number;
+    price: number;
+    date: string;
+  }[];
   subtotal: number;
   dpAmount: number;
+  discountAmount?: number;
   guideCommission: number;
+  guideCode?: string;
+  guideName?: string;
   grandTotal: number;
+  amountReceived?: number;
+  changeAmount?: number;
   partnerId?: string;
   partnerName?: string;
   servedBy?: string;
+  cashierName?: string;
+  cashierId?: string;
   isVoided?: boolean;
   voidReason?: string;
   voidedBy?: string;

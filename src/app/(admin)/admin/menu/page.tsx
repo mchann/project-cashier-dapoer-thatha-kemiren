@@ -3,17 +3,14 @@
 
 import React, { useState } from 'react';
 import { Category, Product } from '@/types/pos';
-import { DUMMY_CATEGORIES, DUMMY_PRODUCTS } from '@/lib/dummy-pos-data';
 import { ProductTable } from '@/components/admin/ProductTable';
 import { ProductModal } from '@/components/admin/ProductModal';
 import { CategoryModal } from '@/components/admin/CategoryModal';
 
 export default function AdminMenuPage() {
   // State Data Master (Kategori & Produk)
-  const [categories, setCategories] = useState<Category[]>(
-    DUMMY_CATEGORIES.filter((c) => c.slug !== 'all')
-  );
-  const [products, setProducts] = useState<Product[]>(DUMMY_PRODUCTS);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   // Tab aktif: 'products' | 'categories'
   const [activeTab, setActiveTab] = useState<'products' | 'categories'>('products');
@@ -30,8 +27,59 @@ export default function AdminMenuPage() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
+  // State Delete Modals
+  const [isDeleteProductModalOpen, setIsDeleteProductModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<{id: string, name: string} | null>(null);
+  
+  const [isDeleteCategoryModalOpen, setIsDeleteCategoryModalOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<{id: string, name: string} | null>(null);
+
   // Notifikasi Aksi Owner
   const [notifMessage, setNotifMessage] = useState<string>('');
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const [prodRes, catRes] = await Promise.all([
+        fetch('/api/admin/products'),
+        fetch('/api/admin/categories')
+      ]);
+      if (prodRes.ok) {
+        const prodData = await prodRes.json();
+        setProducts(prodData);
+      }
+      if (catRes.ok) {
+        const catData = await catRes.json();
+        setCategories(catData.filter((c: Category) => c.slug !== 'all'));
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchData();
+  }, []);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsProductModalOpen(false);
+        setIsCategoryModalOpen(false);
+        setIsDeleteProductModalOpen(false);
+        setIsDeleteCategoryModalOpen(false);
+      }
+    };
+    if (isProductModalOpen || isCategoryModalOpen || isDeleteProductModalOpen || isDeleteCategoryModalOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isProductModalOpen, isCategoryModalOpen, isDeleteProductModalOpen, isDeleteCategoryModalOpen]);
+
 
   const showNotification = (msg: string) => {
     setNotifMessage(msg);
@@ -52,95 +100,81 @@ export default function AdminMenuPage() {
     setIsProductModalOpen(true);
   };
 
-  const handleSaveProduct = (prodData: {
-    _id?: string;
-    name: string;
-    description?: string;
-    price: number;
-    stock: number;
-    image?: string;
-    categoryId: string;
-    isAvailable: boolean;
-  }) => {
-    const catObj = categories.find((c) => c._id === prodData.categoryId) || {
-      _id: prodData.categoryId,
-      name: 'Umum',
-      slug: 'umum',
-    };
-
-    if (prodData._id) {
-      setProducts((prev) =>
-        prev.map((p) =>
-          p._id === prodData._id
-            ? {
-                ...p,
-                name: prodData.name,
-                description: prodData.description,
-                price: prodData.price,
-                stock: prodData.stock,
-                image: prodData.image || '',
-                categoryId: prodData.categoryId,
-                category: catObj,
-                isAvailable: prodData.isAvailable,
-              }
-            : p
-        )
-      );
-      showNotification(`Berhasil memperbarui menu: "${prodData.name}".`);
-    } else {
-      const newProduct: Product = {
-        _id: `prod-${Date.now()}`,
-        name: prodData.name,
-        description: prodData.description,
-        price: prodData.price,
-        stock: prodData.stock,
-        image: prodData.image || '',
-        categoryId: prodData.categoryId,
-        category: catObj,
-        isAvailable: prodData.isAvailable,
-      };
-      setProducts((prev) => [newProduct, ...prev]);
-      showNotification(`Berhasil menambahkan menu baru: "${prodData.name}".`);
+    const handleSaveProduct = async (prodData: any) => {
+    try {
+      const url = prodData._id ? `/api/admin/products/${prodData._id}` : '/api/admin/products';
+      const method = prodData._id ? 'PUT' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(prodData),
+      });
+      
+      if (!res.ok) throw new Error('Gagal menyimpan menu');
+      
+      showNotification(`Berhasil ${prodData._id ? 'memperbarui' : 'menambahkan'} menu: "${prodData.name}".`);
+      setIsProductModalOpen(false);
+      fetchData();
+    } catch (error: any) {
+      alert(error.message);
     }
-    setIsProductModalOpen(false);
   };
 
-  const handleDeleteProduct = (productId: string, productName: string) => {
-    const confirmDelete = window.confirm(
-      `Apakah Anda yakin ingin menghapus menu "${productName}"?`
-    );
-    if (!confirmDelete) return;
-
-    setProducts((prev) => prev.filter((p) => p._id !== productId));
-    showNotification(`Menu "${productName}" berhasil dihapus.`);
+    const handleDeleteProduct = (productId: string, productName: string) => {
+    setProductToDelete({ id: productId, name: productName });
+    setIsDeleteProductModalOpen(true);
   };
 
-  const handleAdjustStock = (productId: string, delta: number) => {
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p._id === productId) {
-          const newStock = Math.max(0, p.stock + delta);
-          return {
-            ...p,
-            stock: newStock,
-            isAvailable: newStock > 0 ? p.isAvailable : false,
-          };
-        }
-        return p;
-      })
-    );
-    showNotification(`Stok berhasil diperbarui.`);
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+    try {
+      const res = await fetch(`/api/admin/products/${productToDelete.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Gagal menghapus menu');
+      showNotification(`Menu "${productToDelete.name}" berhasil dihapus.`);
+      setIsDeleteProductModalOpen(false);
+      setProductToDelete(null);
+      fetchData();
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
-  const handleToggleAvailable = (productId: string, currentStatus: boolean) => {
-    setProducts((prev) =>
-      prev.map((p) =>
-        p._id === productId ? { ...p, isAvailable: !currentStatus } : p
-      )
-    );
-    showNotification(
-      `Status menu diubah menjadi ${!currentStatus ? 'Tersedia' : 'Habis'}.`
-    );
+    const handleAdjustStock = async (productId: string, delta: number) => {
+    try {
+      const prod = products.find(p => p._id === productId);
+      if (!prod) return;
+      const newStock = Math.max(0, prod.stock + delta);
+      
+      const res = await fetch(`/api/admin/products/${productId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...prod, categoryId: prod.categoryId || prod.category?._id, stock: newStock, isAvailable: newStock > 0 ? prod.isAvailable : false }),
+      });
+      if (!res.ok) throw new Error('Gagal memperbarui stok');
+      showNotification('Stok berhasil diperbarui.');
+      fetchData();
+    } catch (error: any) {
+      alert(error.message);
+    }
+  };
+
+    const handleToggleAvailable = async (productId: string, currentStatus: boolean) => {
+    try {
+      const prod = products.find(p => p._id === productId);
+      if (!prod) return;
+      
+      const res = await fetch(`/api/admin/products/${productId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...prod, categoryId: prod.categoryId || prod.category?._id, isAvailable: !currentStatus }),
+      });
+      if (!res.ok) throw new Error('Gagal memperbarui status');
+      showNotification(`Status menu diubah menjadi ${!currentStatus ? 'Tersedia' : 'Habis'}.`);
+      fetchData();
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
   // ----------------------------------------------------
@@ -157,58 +191,48 @@ export default function AdminMenuPage() {
     setIsCategoryModalOpen(true);
   };
 
-  const handleSaveCategory = (catData: {
-    _id?: string;
-    name: string;
-    slug: string;
-  }) => {
-    if (catData._id) {
-      setCategories((prev) =>
-        prev.map((c) =>
-          c._id === catData._id
-            ? { ...c, name: catData.name, slug: catData.slug }
-            : c
-        )
-      );
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.categoryId === catData._id
-            ? {
-                ...p,
-                category: { _id: catData._id!, name: catData.name, slug: catData.slug },
-              }
-            : p
-        )
-      );
-      showNotification(`Berhasil memperbarui kategori: "${catData.name}".`);
-    } else {
-      const newCategory: Category = {
-        _id: `cat-${Date.now()}`,
-        name: catData.name,
-        slug: catData.slug,
-      };
-      setCategories((prev) => [...prev, newCategory]);
-      showNotification(`Berhasil membuat kategori baru: "${catData.name}".`);
+  const handleSaveCategory = async (catData: { _id?: string; name: string; slug: string }) => {
+    try {
+      const url = catData._id ? `/api/admin/categories/${catData._id}` : '/api/admin/categories';
+      const method = catData._id ? 'PUT' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(catData),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Gagal menyimpan kategori');
+      }
+      
+      showNotification(`Berhasil ${catData._id ? 'memperbarui' : 'menambahkan'} kategori: "${catData.name}".`);
+      setIsCategoryModalOpen(false);
+      fetchData();
+    } catch (error: any) {
+      alert(error.message);
     }
-    setIsCategoryModalOpen(false);
   };
 
   const handleDeleteCategory = (categoryId: string, categoryName: string) => {
-    const productsInCat = products.filter((p) => p.categoryId === categoryId);
-    if (productsInCat.length > 0) {
-      alert(
-        `Kategori "${categoryName}" tidak bisa dihapus karena masih digunakan oleh ${productsInCat.length} menu.`
-      );
-      return;
+    setCategoryToDelete({ id: categoryId, name: categoryName });
+    setIsDeleteCategoryModalOpen(true);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+
+    try {
+      const res = await fetch(`/api/admin/categories/${categoryToDelete.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Gagal menghapus kategori');
+      showNotification(`Kategori "${categoryToDelete.name}" berhasil dihapus.`);
+      setIsDeleteCategoryModalOpen(false);
+      setCategoryToDelete(null);
+      fetchData();
+    } catch (error: any) {
+      alert(error.message);
     }
-
-    const confirmDel = window.confirm(
-      `Apakah Anda yakin ingin menghapus kategori "${categoryName}"?`
-    );
-    if (!confirmDel) return;
-
-    setCategories((prev) => prev.filter((c) => c._id !== categoryId));
-    showNotification(`Kategori "${categoryName}" berhasil dihapus.`);
   };
 
   // ----------------------------------------------------
@@ -226,7 +250,7 @@ export default function AdminMenuPage() {
   });
 
   return (
-    <div className="relative p-4 md:p-8 max-w-[1600px] mx-auto space-y-8">
+    <div className="relative p-4 md:p-8 space-y-8">
       
       {/* Notifikasi Toast Mengambang */}
       {notifMessage && (
@@ -269,18 +293,9 @@ export default function AdminMenuPage() {
           </button>
         </div>
 
-        {/* Tombol CTA */}
+        {/* Tombol CTA (Hanya untuk Kategori di sini) */}
         <div>
-          {activeTab === 'products' ? (
-            <button
-              type="button"
-              onClick={handleOpenAddProduct}
-              className="w-full md:w-auto inline-flex items-center justify-center gap-2 bg-[#6F4E37] hover:bg-[#4B3832] text-[#FFFDF7] font-bold text-sm px-6 py-3 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all border border-[#4B3832]"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
-              <span>Tambah Menu Baru</span>
-            </button>
-          ) : (
+          {activeTab === 'categories' && (
             <button
               type="button"
               onClick={handleOpenAddCategory}
@@ -299,44 +314,45 @@ export default function AdminMenuPage() {
       {activeTab === 'products' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
-          {/* Filter & Pencarian (Floating Bar) */}
-          <div className="bg-[#FFFDF7] p-4 rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-[#DCC7AA] flex flex-col xl:flex-row items-center justify-between gap-4">
-            
-            {/* Filter Pills */}
-            <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
-              <span className="font-semibold text-xs text-[#6F4E37] uppercase tracking-widest mr-2 hidden sm:block">Filter:</span>
-              <button
-                type="button"
-                onClick={() => setSelectedCategoryFilter('all')}
-                className={`px-5 py-2 rounded-full font-bold text-xs transition-all border ${
-                  selectedCategoryFilter === 'all'
-                    ? 'bg-[#4B3832] text-[#FFFDF7] border-[#4B3832] shadow-sm'
-                    : 'bg-[#FFFDF7] text-[#6F4E37] border-[#DCC7AA] hover:border-[#6F4E37]'
-                }`}
-              >
-                Semua ({products.length})
-              </button>
-              {categories.map((cat) => {
-                const count = products.filter((p) => p.categoryId === cat._id).length;
-                return (
-                  <button
-                    key={cat._id}
-                    type="button"
-                    onClick={() => setSelectedCategoryFilter(cat._id)}
-                    className={`px-5 py-2 rounded-full font-bold text-xs transition-all border ${
-                      selectedCategoryFilter === cat._id
-                        ? 'bg-[#4B3832] text-[#FFFDF7] border-[#4B3832] shadow-sm'
-                        : 'bg-[#FFFDF7] text-[#6F4E37] border-[#DCC7AA] hover:border-[#6F4E37]'
-                    }`}
-                  >
-                    {cat.name} ({count})
-                  </button>
-                );
-              })}
-            </div>
+          {/* Stat Cards Filter Kategori */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <button
+              type="button"
+              onClick={() => setSelectedCategoryFilter('all')}
+              className={`p-5 rounded-3xl text-left transition-all border shadow-sm flex flex-col justify-between group ${
+                selectedCategoryFilter === 'all'
+                  ? 'bg-[#4B3832] border-[#4B3832]'
+                  : 'bg-[#FFFDF7] border-[#DCC7AA]/60 hover:border-[#6F4E37]'
+              }`}
+            >
+              <span className={`font-bold text-sm mb-2 ${selectedCategoryFilter === 'all' ? 'text-[#FFFDF7]' : 'text-[#6F4E37]'}`}>Semua Menu</span>
+              <span className={`text-3xl font-black ${selectedCategoryFilter === 'all' ? 'text-[#FFFDF7]' : 'text-[#4B3832]'}`}>{products.length}</span>
+            </button>
 
-            {/* Kotak Cari (Modern) */}
-            <div className="w-full xl:w-80 relative group">
+            {categories.slice(0, 3).map((cat) => {
+              const count = products.filter((p) => p.categoryId === cat._id).length;
+              const isActive = selectedCategoryFilter === cat._id;
+              return (
+                <button
+                  key={cat._id}
+                  type="button"
+                  onClick={() => setSelectedCategoryFilter(cat._id)}
+                  className={`p-5 rounded-3xl text-left transition-all border shadow-sm flex flex-col justify-between group ${
+                    isActive
+                      ? 'bg-[#4B3832] border-[#4B3832]'
+                      : 'bg-[#FFFDF7] border-[#DCC7AA]/60 hover:border-[#6F4E37]'
+                  }`}
+                >
+                  <span className={`font-bold text-sm mb-2 ${isActive ? 'text-[#FFFDF7]' : 'text-[#6F4E37]'}`}>{cat.name}</span>
+                  <span className={`text-3xl font-black ${isActive ? 'text-[#FFFDF7]' : 'text-[#4B3832]'}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Toolbar Tabel (Pencarian & Tambah Menu) */}
+          <div className="bg-[#FFFDF7] p-4 rounded-t-3xl border border-[#DCC7AA] border-b-0 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="w-full md:w-80 relative group">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#DCC7AA] group-focus-within:text-[#6F4E37] transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
               </span>
@@ -345,13 +361,22 @@ export default function AdminMenuPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari nama menu..."
-                className="w-full bg-[#FFFDF7] hover:bg-[#F5E6CA] border border-[#DCC7AA] focus:border-[#6F4E37] focus:bg-[#FFFDF7] rounded-full pl-12 pr-4 py-2.5 font-semibold text-sm text-[#4B3832] outline-none transition-all shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)]"
+                className="w-full bg-[#FFFDF7] border border-[#DCC7AA] focus:border-[#6F4E37] focus:ring-1 focus:ring-[#6F4E37] rounded-full pl-12 pr-4 py-2.5 font-semibold text-sm text-[#4B3832] outline-none transition-all shadow-inner"
               />
             </div>
+            
+            <button
+              type="button"
+              onClick={handleOpenAddProduct}
+              className="w-full md:w-auto inline-flex items-center justify-center gap-2 bg-[#6F4E37] hover:bg-[#4B3832] text-[#FFFDF7] font-bold text-sm px-6 py-2.5 rounded-full shadow-sm hover:shadow-md transition-colors border border-[#4B3832]"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+              <span>Tambah Menu</span>
+            </button>
           </div>
 
           {/* Tabel / Daftar Produk */}
-          <div className="bg-[#FFFDF7] rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-[#DCC7AA] overflow-hidden">
+          <div className="bg-[#FFFDF7] rounded-b-3xl shadow-sm border border-[#DCC7AA] overflow-hidden -mt-6">
             <ProductTable
               products={filteredProducts}
               onEditProduct={handleOpenEditProduct}
@@ -427,6 +452,81 @@ export default function AdminMenuPage() {
         onClose={() => setIsCategoryModalOpen(false)}
         onSave={handleSaveCategory}
       />
+
+      {/* Delete Product Confirmation Modal */}
+      {isDeleteProductModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
+          onClick={() => { setIsDeleteProductModalOpen(false); setProductToDelete(null); }}
+        >
+          <div 
+            className="bg-[#FFFDF7] rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-[#DCC7AA] animate-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4 text-red-600">
+                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              </div>
+              <h3 className="text-xl font-black text-[#4B3832] mb-2">Hapus Menu?</h3>
+              <p className="text-sm text-[#6F4E37] font-medium mb-6">
+                Apakah Anda yakin ingin menghapus menu <strong>"{productToDelete?.name}"</strong>?
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => { setIsDeleteProductModalOpen(false); setProductToDelete(null); }}
+                  className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={confirmDeleteProduct}
+                  className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shadow-md shadow-red-600/20"
+                >
+                  Ya, Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Category Confirmation Modal */}
+      {isDeleteCategoryModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
+          onClick={() => { setIsDeleteCategoryModalOpen(false); setCategoryToDelete(null); }}
+        >
+          <div 
+            className="bg-[#FFFDF7] rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-[#DCC7AA] animate-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4 text-red-600">
+                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              </div>
+              <h3 className="text-xl font-black text-[#4B3832] mb-2">Hapus Kategori?</h3>
+              <p className="text-sm text-[#6F4E37] font-medium mb-6">
+                Apakah Anda yakin ingin menghapus kategori <strong>"{categoryToDelete?.name}"</strong>?<br/>
+                <span className="text-xs mt-2 block text-red-500 font-bold">(Menu di dalam kategori ini bisa kehilangan referensinya)</span>
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => { setIsDeleteCategoryModalOpen(false); setCategoryToDelete(null); }}
+                  className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={confirmDeleteCategory}
+                  className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shadow-md shadow-red-600/20"
+                >
+                  Ya, Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

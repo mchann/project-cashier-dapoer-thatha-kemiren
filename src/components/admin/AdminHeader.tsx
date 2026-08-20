@@ -55,7 +55,7 @@ export function AdminHeader({
       {/* Tengah: Rangkuman Cepat (Hanya tampil di tablet & desktop) */}
       <div className="hidden lg:flex items-center gap-4 bg-[#291404] px-4 py-2 rounded-xl border border-[#78350f]">
         <div className="text-center">
-          <span className="block text-xs font-bold text-[#fde68a]">PENDAPATAN HARI INI</span>
+          <span className="block text-xs font-bold text-[#fde68a]">PENJUALAN HARI INI</span>
           <span className="text-lg font-black text-[#22c55e]">{formatRupiah(todayRevenue)}</span>
         </div>
         <div className="w-px h-8 bg-[#78350f]" aria-hidden="true" />

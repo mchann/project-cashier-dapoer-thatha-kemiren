@@ -11,13 +11,31 @@ interface CategoryModalProps {
   onSave: (categoryData: { _id?: string; name: string; slug: string }) => void;
 }
 
-interface CategoryFormProps {
-  initialData?: Category | null;
-  onClose: () => void;
-  onSave: (categoryData: { _id?: string; name: string; slug: string }) => void;
+export function CategoryModal({
+  isOpen,
+  initialData,
+  onClose,
+  onSave,
+}: CategoryModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+    >
+      <CategoryForm
+        key={initialData?._id || 'new-category'}
+        initialData={initialData}
+        onClose={onClose}
+        onSave={onSave}
+      />
+    </div>
+  );
 }
 
-function CategoryForm({ initialData, onClose, onSave }: CategoryFormProps) {
+function CategoryForm({ initialData, onClose, onSave }: Omit<CategoryModalProps, 'isOpen'>) {
   const [name, setName] = useState(initialData?.name || '');
   const [slug, setSlug] = useState(initialData?.slug || '');
   const [errorMsg, setErrorMsg] = useState('');
@@ -25,7 +43,6 @@ function CategoryForm({ initialData, onClose, onSave }: CategoryFormProps) {
   const handleNameChange = (val: string) => {
     setName(val);
     if (!initialData) {
-      // Auto generate slug jika buat baru
       const generatedSlug = val
         .toLowerCase()
         .trim()
@@ -54,110 +71,84 @@ function CategoryForm({ initialData, onClose, onSave }: CategoryFormProps) {
   };
 
   return (
-    <div className="bg-white rounded-2xl border-4 border-[#78350f] shadow-2xl w-full max-w-lg p-6 space-y-5">
+    <div className="bg-[#FFFDF7] rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[95vh] flex flex-col my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
       {/* Header Modal */}
-      <div className="border-b-2 border-[#e7e5e4] pb-3 flex items-center justify-between">
-        <div>
-          <span className="bg-[#78350f] text-[#fcd34d] font-extrabold text-xs px-2.5 py-1 rounded uppercase tracking-wider border border-[#f59e0b]">
-            KATEGORI MENU
-          </span>
-          <h2 id="category-modal-title" className="text-2xl font-black text-[#291404] mt-2">
-            {initialData ? 'EDIT KATEGORI MENU' : 'TAMBAH KATEGORI BARU'}
-          </h2>
-        </div>
+      <div className="px-8 pt-8 pb-4 flex items-center justify-between shrink-0">
+        <h2 id="category-modal-title" className="text-2xl font-bold text-[#4B3832]">
+          {initialData ? 'Edit Kategori' : 'Tambah Kategori Baru'}
+        </h2>
         <button
           type="button"
           onClick={onClose}
-          className="text-sm font-extrabold px-3 py-1.5 bg-[#fefce8] hover:bg-[#fef3c7] text-[#57300a] rounded-lg border-2 border-[#d6d3d1] cursor-pointer"
+          className="w-8 h-8 rounded-full bg-[#4B3832] text-[#FFFDF7] flex items-center justify-center hover:bg-[#6F4E37] transition-colors shadow-sm"
         >
-          Tutup [Esc]
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
 
-      {/* Form Input Kategori */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="cat-name-input" className="block text-base font-black text-[#291404] mb-1">
-            Nama Kategori:
-          </label>
-          <input
-            id="cat-name-input"
-            type="text"
-            value={name}
-            onChange={(e) => handleNameChange(e.target.value)}
-            placeholder="Contoh: Paket Keluarga / Minuman Tradisional"
-            autoFocus
-            className="w-full bg-[#fefce8] border-2 border-[#a8a29e] rounded-xl px-4 py-3 font-bold text-lg text-[#291404] focus:border-[#d97706]"
-          />
-        </div>
+      {/* Form Container */}
+      <div className="px-8 pb-8 overflow-y-auto flex-1 custom-scrollbar">
+        <form id="category-form" onSubmit={handleSubmit} className="border border-[#DCC7AA]/70 rounded-[2rem] p-8 space-y-6">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+            <div>
+              <label htmlFor="cat-name-input" className="block text-sm font-medium text-[#6F4E37] mb-2">
+                Nama Kategori
+              </label>
+              <input
+                id="cat-name-input"
+                type="text"
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="Contoh: Minuman Segar"
+                autoFocus
+                className="w-full bg-transparent border border-[#DCC7AA] rounded-2xl px-4 py-3 text-sm font-semibold text-[#4B3832] focus:border-[#6F4E37] focus:ring-1 focus:ring-[#6F4E37] outline-none transition-all placeholder:text-[#DCC7AA]"
+              />
+            </div>
 
-        <div>
-          <label htmlFor="cat-slug-input" className="block text-base font-black text-[#291404] mb-1">
-            Slug Kategori (ID URL):
-          </label>
-          <input
-            id="cat-slug-input"
-            type="text"
-            value={slug}
-            onChange={(e) => {
-              setSlug(e.target.value);
-              if (errorMsg) setErrorMsg('');
-            }}
-            placeholder="contoh: paket-keluarga"
-            className="w-full bg-[#fefce8] border-2 border-[#a8a29e] rounded-xl px-4 py-3 font-mono font-bold text-base text-[#57300a] focus:border-[#d97706]"
-          />
-          <p className="text-xs font-bold text-[#78350f] mt-1">
-            * Digunakan oleh sistem untuk pengelompokan menu (huruf kecil &amp; tanda strip).
-          </p>
-        </div>
-
-        {errorMsg && (
-          <div role="alert" className="bg-red-100 border-2 border-red-500 text-red-900 font-bold px-4 py-2.5 rounded-lg text-sm">
-            {errorMsg}
+            <div>
+              <label htmlFor="cat-slug-input" className="block text-sm font-medium text-[#6F4E37] mb-2">
+                Slug (ID URL)
+              </label>
+              <input
+                id="cat-slug-input"
+                type="text"
+                value={slug}
+                onChange={(e) => {
+                  setSlug(e.target.value);
+                  if (errorMsg) setErrorMsg('');
+                }}
+                placeholder="ex: minuman-segar"
+                className="w-full bg-transparent border border-[#DCC7AA] rounded-2xl px-4 py-3 text-sm font-semibold text-[#4B3832] focus:border-[#6F4E37] focus:ring-1 focus:ring-[#6F4E37] outline-none transition-all placeholder:text-[#DCC7AA]"
+              />
+            </div>
           </div>
-        )}
 
-        <div className="flex items-center gap-3 pt-2">
+          {errorMsg && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm font-medium px-4 py-3 rounded-2xl">
+              {errorMsg}
+            </div>
+          )}
+        </form>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end gap-3 mt-6">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 bg-[#fefce8] hover:bg-[#fef3c7] text-[#291404] font-bold py-3.5 rounded-xl border-2 border-[#d6d3d1] cursor-pointer transition-colors"
+            className="px-8 py-3 rounded-full border border-[#DCC7AA] bg-[#FFFDF7] hover:bg-[#F5E6CA] text-[#4B3832] text-sm font-bold transition-colors"
           >
             Batal
           </button>
           <button
             type="submit"
-            className="flex-1 bg-[#78350f] hover:bg-[#451a03] text-white font-black py-3.5 rounded-xl border-2 border-[#d97706] shadow-md cursor-pointer transition-colors"
+            form="category-form"
+            className="px-8 py-3 rounded-full bg-[#4B3832] hover:bg-[#6F4E37] text-[#FFFDF7] text-sm font-bold transition-colors shadow-sm"
           >
-            {initialData ? 'Simpan Perubahan' : '+ Simpan Kategori'}
+            Simpan
           </button>
         </div>
-      </form>
-    </div>
-  );
-}
-
-export function CategoryModal({
-  isOpen,
-  initialData,
-  onClose,
-  onSave,
-}: CategoryModalProps) {
-  if (!isOpen) return null;
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="category-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
-    >
-      <CategoryForm
-        key={initialData?._id || 'new-category'}
-        initialData={initialData}
-        onClose={onClose}
-        onSave={onSave}
-      />
+      </div>
     </div>
   );
 }

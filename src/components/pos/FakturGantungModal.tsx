@@ -38,6 +38,14 @@ export function FakturGantungModal({
     }).format(number);
   };
 
+  const formatDateTime = (dateString: string | undefined) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    const time = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+    const dateStr = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    return `${time} WIB (${dateStr})`;
+  };
   return (
     <div 
       role="dialog"
@@ -130,7 +138,7 @@ export function FakturGantungModal({
                     <div className="flex items-center gap-4 text-xs font-medium text-[#8B7355]">
                       <span><strong className="text-[#6F4E37]">Struk:</strong> {order.invoiceNumber}</span>
                       <span><strong className="text-[#6F4E37]">Item:</strong> {totalQty}</span>
-                      <span><strong className="text-[#6F4E37]">Waktu:</strong> {order.createdAt}</span>
+                      <span><strong className="text-[#6F4E37]">Waktu:</strong> {formatDateTime(order.createdAt)}</span>
                     </div>
                   </div>
 

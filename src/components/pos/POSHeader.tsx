@@ -1,24 +1,30 @@
 // src/components/pos/POSHeader.tsx
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { NotificationBell } from '@/components/shared/NotificationBell';
+import { TutupTokoModal } from './TutupTokoModal';
 
 interface POSHeaderProps {
   cashierName?: string;
+  shiftName?: string;
   openOrdersCount?: number;
   totalOrders?: number;
   totalRevenue?: number;
   onOpenSidebar: () => void;
   onOpenFakturGantung: () => void;
+  onOpenTarikReservasi: () => void;
 }
 
 export function POSHeader({
   cashierName = 'Siti (Kasir 01)',
+  shiftName = 'Shift Pagi (08:00 - 16:00)',
   openOrdersCount = 3,
   totalOrders = 20,
   totalRevenue = 2500000,
   onOpenSidebar,
   onOpenFakturGantung,
+  onOpenTarikReservasi,
 }: POSHeaderProps) {
   // Format tanggal hari ini
   const today = new Date().toLocaleDateString('id-ID', {
@@ -36,7 +42,10 @@ export function POSHeader({
     }).format(number);
   };
 
+  const [isTutupTokoOpen, setIsTutupTokoOpen] = useState(false);
+
   return (
+    <>
     <header className="bg-[#FFFDF7] px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-30">
       {/* Kiri: Burger, Logo & Tanggal */}
       <div className="flex items-center gap-6">
@@ -60,7 +69,7 @@ export function POSHeader({
       {/* Kanan: Stats, Tombol, Profile */}
       <div className="flex items-center gap-4">
         <div className="hidden lg:flex flex-col items-end mr-1">
-          <span className="text-[10px] font-bold text-[#6F4E37] uppercase tracking-wider">Pendapatan Hari Ini</span>
+          <span className="text-[10px] font-bold text-[#6F4E37] uppercase tracking-wider">Penjualan Hari Ini</span>
           <span className="text-sm font-black text-[#4B3832]">{formatRupiah(totalRevenue)}</span>
         </div>
         
@@ -69,13 +78,23 @@ export function POSHeader({
           <span className="text-sm font-black text-[#4B3832]">{totalOrders} Transaksi</span>
         </div>
 
+        {/* Tarik Reservasi Button */}
+        <button
+          type="button"
+          onClick={onOpenTarikReservasi}
+          className="relative inline-flex items-center gap-2 bg-[#4B3832] border border-[#4B3832] px-4 py-2 rounded-full font-bold text-sm text-[#FFFDF7] hover:bg-[#6F4E37] transition-colors shadow-sm"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+          <span className="hidden sm:inline">Tarik Reservasi</span>
+        </button>
+
         {/* Faktur Gantung Button */}
         <button
           type="button"
           onClick={onOpenFakturGantung}
           className="relative inline-flex items-center gap-2 bg-white border border-[#DCC7AA] px-4 py-2 rounded-full font-bold text-sm text-[#4B3832] hover:bg-[#F5E6CA] transition-colors group"
         >
-          <span>Faktur Gantung</span>
+          <span className="hidden sm:inline">Faktur Gantung</span>
           {openOrdersCount > 0 && (
             <span className="bg-[#ef4444] text-white font-extrabold px-1.5 py-0.5 rounded-full text-[10px]">
               {openOrdersCount}
@@ -84,24 +103,45 @@ export function POSHeader({
         </button>
 
         {/* Notification Bell */}
-        <button className="relative p-2.5 bg-white border border-[#DCC7AA] rounded-full text-[#4B3832] hover:bg-[#F5E6CA] transition-colors">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-          <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#ef4444] border-2 border-white rounded-full"></span>
-        </button>
+        <NotificationBell role="staff" />
 
-        {/* Profile */}
-        <div className="flex items-center gap-3 bg-white border border-[#DCC7AA] pl-1 pr-4 py-1 rounded-full cursor-pointer hover:bg-[#F5E6CA] transition-colors">
-          <img 
-            src="https://ui-avatars.com/api/?name=Siti+Kasir&background=4B3832&color=FFFDF7" 
-            alt="Profile" 
-            className="w-8 h-8 rounded-full"
-          />
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-[#4B3832] leading-none mb-1">{cashierName.split(' ')[0]}</span>
-            <span className="text-[10px] text-[#6F4E37] leading-none">Kasir</span>
+        {/* Profile Dropdown */}
+        <div className="relative group">
+          <div className="flex items-center gap-3 bg-white border border-[#DCC7AA] pl-1 pr-4 py-1 rounded-full cursor-pointer hover:bg-[#F5E6CA] transition-colors">
+            <img 
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(cashierName)}&background=4B3832&color=FFFDF7`}
+              alt="Profile" 
+              className="w-8 h-8 rounded-full"
+            />
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-[#4B3832] leading-none mb-1">{cashierName}</span>
+              <span className="text-[10px] text-[#6F4E37] leading-none uppercase">{shiftName}</span>
+            </div>
+            <svg className="w-4 h-4 ml-2 text-[#6F4E37]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+          
+          {/* Dropdown Menu */}
+          <div className="absolute right-0 mt-2 w-48 bg-white border border-[#DCC7AA] rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+            <div className="p-2">
+              <button 
+                onClick={() => setIsTutupTokoOpen(true)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                Tutup Toko
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </header>
+
+    {isTutupTokoOpen && (
+      <TutupTokoModal 
+        onClose={() => setIsTutupTokoOpen(false)} 
+        cashierName={cashierName} 
+      />
+    )}
+    </>
   );
 }
