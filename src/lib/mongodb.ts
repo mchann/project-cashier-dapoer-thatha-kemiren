@@ -7,11 +7,20 @@ if (!MONGODB_URI) {
     throw new Error('Silakan definisikan environment variable MONGODB_URI di .env.local');
 }
 
-// Menggunakan global object agar koneksi di-cache antar hot reloads di development.
-let cached = (global as any).mongoose;
+interface MongooseCache {
+    conn: typeof mongoose | null;
+    promise: Promise<typeof mongoose> | null;
+}
 
-if (!cached) {
-    cached = (global as any).mongoose = { conn: null, promise: null };
+declare global {
+    var mongooseCache: MongooseCache | undefined;
+}
+
+// Menggunakan global object agar koneksi di-cache antar hot reloads di development.
+const cached: MongooseCache = global.mongooseCache || { conn: null, promise: null };
+
+if (!global.mongooseCache) {
+    global.mongooseCache = cached;
 }
 
 async function connectMongo() {
