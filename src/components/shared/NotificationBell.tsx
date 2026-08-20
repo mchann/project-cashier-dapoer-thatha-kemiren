@@ -20,23 +20,27 @@ export function NotificationBell({ role }: NotificationBellProps) {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const fetchLogs = async () => {
-    try {
-      const res = await fetch(`/api/logs?role=${role}`);
-      if (res.ok) {
-        const data = await res.json();
-        setLogs(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch logs:', err);
-    }
-  };
-
   useEffect(() => {
+    let isMounted = true;
+    const fetchLogs = async () => {
+      try {
+        const res = await fetch(`/api/logs?role=${role}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) setLogs(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch logs:', err);
+      }
+    };
+
     fetchLogs();
     // Poll every 30 seconds
     const interval = setInterval(fetchLogs, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [role]);
 
   // Click outside to close

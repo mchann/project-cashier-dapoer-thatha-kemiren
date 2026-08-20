@@ -190,7 +190,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       await Product.bulkWrite(bulkOps);
     }
 
-    await Transaction.findByIdAndDelete(transactionId);
+    // Set paymentStatus to void instead of deleting
+    transaction.paymentStatus = 'void';
+    await transaction.save();
 
     await ActivityLog.create({
       title: 'Batal Transaksi / Void',

@@ -108,7 +108,7 @@ export function ReceiptModal({ isOpen, transactionData, onClose }: ReceiptModalP
             <div className="mb-4">
               <div className="flex justify-between">
                 <span>Waktu</span>
-                <span>{new Date(transactionData.createdAt || Date.now()).toLocaleDateString('id-ID', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                <span>{new Date(transactionData.createdAt || new Date()).toLocaleDateString('id-ID', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
               </div>
               <div className="flex justify-between">
                 <span>No. INV</span>

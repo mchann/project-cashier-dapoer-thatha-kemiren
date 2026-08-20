@@ -6,6 +6,7 @@ import { Order } from '@/types/pos';
 export default function AdminOrderHistoryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all'|'paid'|'void'|'reservation'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   
   // State untuk expandable table row
@@ -65,10 +66,18 @@ export default function AdminOrderHistoryPage() {
     // Filter Tanggal
     let matchDate = true;
     if (dateFilter) {
-      matchDate = true; 
+      // o.createdAt bisa berupa string ISO dari Mongoose
+      const orderDate = new Date(o.createdAt || '').toLocaleDateString('en-CA'); // format YYYY-MM-DD
+      matchDate = orderDate === dateFilter; 
     }
 
-    return matchText && matchDate;
+    // Filter Tipe (Lunas, Batal, Reservasi)
+    let matchType = true;
+    if (typeFilter === 'paid') matchType = o.paymentStatus === 'paid' && o.orderType !== 'reservation';
+    else if (typeFilter === 'void') matchType = o.paymentStatus === 'void';
+    else if (typeFilter === 'reservation') matchType = o.orderType === 'reservation';
+
+    return matchText && matchDate && matchType;
   });
 
   useEffect(() => {
@@ -99,7 +108,7 @@ export default function AdminOrderHistoryPage() {
              </div>
              <div>
                <h1 className="text-2xl font-black text-[#4B3832] tracking-tight">Riwayat Transaksi</h1>
-               <p className="text-sm font-bold text-[#6F4E37]">Daftar pesanan yang telah diselesaikan (Lunas)</p>
+               <p className="text-sm font-bold text-[#6F4E37]">Daftar pesanan (Lunas & Batal)</p>
              </div>
           </div>
 
@@ -137,29 +146,58 @@ export default function AdminOrderHistoryPage() {
           </div>
 
           {/* Filter Bar */}
-          <div className="bg-white p-4 rounded-2xl border border-[#DCC7AA]/70 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-            {/* Input Pencarian */}
-            <div className="relative w-full md:w-1/2">
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6F4E37]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari No. Meja, Nama Tamu, atau No. Struk..."
-                className="w-full bg-[#FFFDF7] border border-[#DCC7AA] rounded-full pl-11 pr-4 py-2.5 font-bold text-sm text-[#4B3832] focus:border-[#4B3832] outline-none transition-all"
-              />
+          <div className="bg-white p-4 rounded-2xl border border-[#DCC7AA]/70 shadow-sm flex flex-col gap-4 mb-6">
+            {/* Filter Tipe (Segmented Control) */}
+            <div className="flex w-full overflow-x-auto scrollbar-hide gap-1 bg-gray-100 p-1 rounded-xl shadow-inner shrink-0">
+              <button 
+                onClick={() => setTypeFilter('all')}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-black transition-all whitespace-nowrap ${typeFilter === 'all' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Semua Tipe
+              </button>
+              <button 
+                onClick={() => setTypeFilter('paid')}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-black transition-all whitespace-nowrap ${typeFilter === 'paid' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Selesai (Lunas)
+              </button>
+              <button 
+                onClick={() => setTypeFilter('void')}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-black transition-all whitespace-nowrap ${typeFilter === 'void' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Dibatalkan (Void)
+              </button>
+              <button 
+                onClick={() => setTypeFilter('reservation')}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-black transition-all whitespace-nowrap ${typeFilter === 'reservation' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Reservasi
+              </button>
             </div>
-            
-            {/* Input Filter Tanggal */}
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <label htmlFor="date-filter" className="text-xs font-bold text-[#6F4E37] whitespace-nowrap">Filter Tanggal:</label>
-              <input
-                id="date-filter"
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="bg-[#FFFDF7] border border-[#DCC7AA] rounded-xl px-4 py-2 font-bold text-sm text-[#4B3832] focus:border-[#4B3832] outline-none transition-all flex-1 md:w-48"
-              />
+
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+              {/* Input Pencarian */}
+              <div className="relative w-full md:w-1/2">
+                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6F4E37]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari No. Meja, Nama Tamu, atau No. Struk..."
+                  className="w-full bg-[#FFFDF7] border border-[#DCC7AA] rounded-full pl-11 pr-4 py-2.5 font-bold text-sm text-[#4B3832] focus:border-[#4B3832] outline-none transition-all"
+                />
+              </div>
+              
+              {/* Input Filter Tanggal */}
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <input
+                  id="date-filter"
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="bg-[#FFFDF7] border border-[#DCC7AA] rounded-xl px-4 py-2 font-bold text-sm text-[#4B3832] focus:border-[#4B3832] outline-none transition-all flex-1 md:w-48"
+                />
+              </div>
             </div>
           </div>
 
@@ -172,15 +210,15 @@ export default function AdminOrderHistoryPage() {
                 </div>
               ) : (
                 <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-[#4B3832] text-[#FFFDF7]">
-                      <th className="px-5 py-4 text-xs font-black uppercase tracking-wider w-12 text-center">#</th>
-                      <th className="px-5 py-4 text-xs font-black uppercase tracking-wider">No. Struk</th>
-                      <th className="px-5 py-4 text-xs font-black uppercase tracking-wider">Tanggal & Waktu</th>
-                      <th className="px-5 py-4 text-xs font-black uppercase tracking-wider text-center">Meja</th>
-                      <th className="px-5 py-4 text-xs font-black uppercase tracking-wider">Nama Tamu</th>
-                      <th className="px-5 py-4 text-xs font-black uppercase tracking-wider text-right">Total Bayar</th>
-                      <th className="px-5 py-4 text-xs font-black uppercase tracking-wider text-center">Aksi</th>
+                  <thead className="bg-[#FFFDF7] text-xs uppercase font-black text-[#6F4E37] border-b border-[#DCC7AA]">
+                    <tr>
+                      <th className="px-5 py-4 text-center w-12">#</th>
+                      <th className="px-5 py-4">No. Struk</th>
+                      <th className="px-5 py-4">Tanggal & Waktu</th>
+                      <th className="px-5 py-4 text-center">Meja</th>
+                      <th className="px-5 py-4">Nama Tamu</th>
+                      <th className="px-5 py-4 text-right">Total Bayar</th>
+                      <th className="px-5 py-4 text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#DCC7AA]/40 text-sm font-medium text-[#4B3832]">
@@ -202,7 +240,14 @@ export default function AdminOrderHistoryPage() {
                               <td className="px-5 py-4 text-center border-r border-[#DCC7AA]/20 text-[#6F4E37] font-bold">
                                 {index + 1 + (currentPage - 1) * ITEMS_PER_PAGE}
                               </td>
-                              <td className="px-5 py-4 font-bold text-[#6F4E37] whitespace-nowrap">{order.invoiceNumber}</td>
+                              <td className="px-5 py-4 font-bold text-[#6F4E37] whitespace-nowrap">
+                                <div className="flex items-center gap-2">
+                                  <span>{order.invoiceNumber}</span>
+                                  {order.paymentStatus === 'void' && (
+                                    <span className="bg-red-100 text-red-600 text-[10px] font-black px-2 py-0.5 rounded border border-red-200">VOID</span>
+                                  )}
+                                </div>
+                              </td>
                               <td className="px-5 py-4 whitespace-nowrap">{new Date(order.createdAt || '').toLocaleString('id-ID')}</td>
                               <td className="px-5 py-4 text-center">
                                 <span className="bg-[#4B3832] text-[#FFFDF7] px-2.5 py-1 rounded-md font-black text-xs">
@@ -318,7 +363,13 @@ export default function AdminOrderHistoryPage() {
                   {selectedOrder.dpAmount > 0 && <div className="flex justify-between text-sm"><span className="text-amber-600 font-bold">Uang Muka (DP)</span><span className="text-amber-700 font-black">-{formatRupiah(selectedOrder.dpAmount)}</span></div>}
                   {selectedOrder.guideCommission > 0 && <div className="flex justify-between text-sm"><span className="text-[#6F4E37] font-bold">Potongan Travel/Guide</span><span className="text-[#6F4E37] font-black">-{formatRupiah(selectedOrder.guideCommission)}</span></div>}
                   <div className="pt-3 border-t border-[#DCC7AA]/40 flex justify-between"><span className="text-[#4B3832] font-black text-base">TOTAL DIBAYAR</span><span className="text-[#4B3832] font-black text-xl">{formatRupiah(selectedOrder.grandTotal)}</span></div>
-                  <div className="pt-4"><span className="w-full block text-center bg-emerald-100 text-emerald-700 font-black text-xs uppercase tracking-wider py-2 rounded-lg border border-emerald-200">Status: {selectedOrder.paymentStatus === 'paid' ? 'LUNAS' : selectedOrder.paymentStatus}</span></div>
+                  <div className="pt-4">
+                    {selectedOrder.paymentStatus === 'void' ? (
+                      <span className="w-full block text-center bg-red-100 text-red-700 font-black text-xs uppercase tracking-wider py-2 rounded-lg border border-red-200">Status: BATAL / VOID</span>
+                    ) : (
+                      <span className="w-full block text-center bg-emerald-100 text-emerald-700 font-black text-xs uppercase tracking-wider py-2 rounded-lg border border-emerald-200">Status: {selectedOrder.paymentStatus === 'paid' ? 'LUNAS' : selectedOrder.paymentStatus}</span>
+                    )}
+                  </div>
                 </div>
 
               </div>

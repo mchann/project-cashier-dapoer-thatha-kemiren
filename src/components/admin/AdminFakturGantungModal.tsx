@@ -13,18 +13,27 @@ export function AdminFakturGantungModal({ isOpen, onClose }: AdminFakturGantungM
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
+    let isMounted = true;
+    const loadPendingFakturs = async () => {
+      if (!isOpen) return;
       setIsLoading(true);
-      fetch('/api/pos/transactions/pending')
-        .then(res => res.json())
-        .then(data => {
+      try {
+        const res = await fetch('/api/pos/transactions/pending');
+        const data = await res.json();
+        if (isMounted) {
+          if (!res.ok) throw new Error(data.error);
           if (Array.isArray(data)) {
             setOrders(data);
           }
-        })
-        .catch(err => console.error(err))
-        .finally(() => setIsLoading(false));
-    }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    loadPendingFakturs();
+    return () => { isMounted = false; };
   }, [isOpen]);
 
   if (!isOpen) return null;

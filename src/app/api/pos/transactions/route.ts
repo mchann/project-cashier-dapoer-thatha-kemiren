@@ -19,7 +19,7 @@ export async function GET() {
     }
 
     // Mengambil semua transaksi lunas, diurutkan dari terbaru
-    const transactions = await Transaction.find({ paymentStatus: 'paid' }).sort({ createdAt: -1 });
+    const transactions = await Transaction.find({ paymentStatus: { $in: ['paid', 'void'] } }).sort({ createdAt: -1 });
     
     return NextResponse.json(transactions);
   } catch (error) {

@@ -57,7 +57,7 @@ export async function PUT(req: Request, { params }: Params) {
       });
     }
 
-    const pObj = updatedProduct.toObject();
+    const pObj = updatedProduct!.toObject();
     const formattedProduct = {
       ...pObj,
       category: pObj.categoryId,

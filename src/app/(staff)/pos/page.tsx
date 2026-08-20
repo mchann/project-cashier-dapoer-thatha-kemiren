@@ -20,6 +20,7 @@ import { FakturGantungModal } from '@/components/pos/FakturGantungModal';
 import { VoidPinModal } from '@/components/pos/VoidPinModal';
 import { PaymentModal } from '@/components/pos/PaymentModal';
 import { ReceiptModal } from '@/components/pos/ReceiptModal';
+import { TarikReservasiModal } from '@/components/pos/TarikReservasiModal';
 import { useSession } from 'next-auth/react';
 
 export default function POSPage() {
@@ -49,6 +50,7 @@ export default function POSPage() {
   const [isVoidModalOpen, setIsVoidModalOpen] = useState<boolean>(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [isTarikReservasiModalOpen, setIsTarikReservasiModalOpen] = useState(false);
   const [lastTransaction, setLastTransaction] = useState<Order | null>(null);
 
   // Derivasi data pesanan (Aktif)
@@ -458,7 +460,29 @@ export default function POSPage() {
     [tableNumber, activeOrderId, handleClearCart, showNotification, fetchData]
   );
 
-  // --- Keyboard Shortcuts (F2 untuk Faktur Gantung, Esc untuk modal) ---
+  // --- Handler Load Draft Order (Reservasi) ---
+  const handleLoadReservation = useCallback((draftData: any) => {
+    // Kosongkan cart saat ini
+    setCartItems([]);
+    setCustomerName(draftData.customerName || '');
+    setTableNumber(draftData.tableNumber || '');
+    setOrderType('reservation');
+    
+    // Load item ke cart
+    if (draftData.items && draftData.items.length > 0) {
+      const newItems: OrderItem[] = draftData.items.map((item: any) => ({
+        productId: item.product._id,
+        name: item.product.name,
+        price: item.price,
+        quantity: item.quantity,
+      }));
+      setCartItems(newItems);
+    }
+    
+    showNotification('Berhasil menarik data reservasi!');
+  }, [showNotification]);
+
+  // --- Keyboard Shortcuts --- (F2 untuk Faktur Gantung, Esc untuk modal) ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F2') {
@@ -499,6 +523,7 @@ export default function POSPage() {
         totalRevenue={dashboardStats.revenueToday}
         onOpenSidebar={() => setIsSidebarOpen(true)}
         onOpenFakturGantung={() => setIsFakturModalOpen(true)}
+        onOpenTarikReservasi={() => setIsTarikReservasiModalOpen(true)}
       />
 
       {/* 2. Banner Notifikasi Aksi (A11y Live Region) */}
@@ -634,6 +659,11 @@ export default function POSPage() {
         isOpen={isReceiptModalOpen}
         transactionData={lastTransaction}
         onClose={handleCloseReceipt}
+      />
+      <TarikReservasiModal
+        isOpen={isTarikReservasiModalOpen}
+        onClose={() => setIsTarikReservasiModalOpen(false)}
+        onLoadReservation={handleLoadReservation}
       />
     </div>
   );

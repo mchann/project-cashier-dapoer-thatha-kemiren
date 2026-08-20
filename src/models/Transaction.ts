@@ -13,7 +13,7 @@ export interface ITransaction extends Document {
   tableNumber?: string;
   customerName: string;
   orderType: 'dine_in' | 'takeaway' | 'reservation' | 'qr_order';
-  paymentStatus: 'unpaid' | 'dp_paid' | 'paid';
+  paymentStatus: 'unpaid' | 'dp_paid' | 'paid' | 'void';
   items: ITransactionItem[];
   subtotal: number;
   dpAmount: number;
@@ -53,7 +53,7 @@ const TransactionSchema = new Schema<ITransaction>(
     },
     paymentStatus: {
       type: String,
-      enum: ['unpaid', 'dp_paid', 'paid'],
+      enum: ['unpaid', 'dp_paid', 'paid', 'void'],
       required: true,
       default: 'paid',
     },
@@ -73,6 +73,10 @@ const TransactionSchema = new Schema<ITransaction>(
   { timestamps: true }
 );
 
-const Transaction = mongoose.models.Transaction || mongoose.model<ITransaction>('Transaction', TransactionSchema);
+// Prevent mongoose from using cached model in dev mode
+if (mongoose.models.Transaction) {
+  delete mongoose.models.Transaction;
+}
+const Transaction = mongoose.model<ITransaction>('Transaction', TransactionSchema);
 
 export default Transaction;

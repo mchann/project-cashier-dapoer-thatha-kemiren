@@ -13,6 +13,7 @@ interface POSHeaderProps {
   totalRevenue?: number;
   onOpenSidebar: () => void;
   onOpenFakturGantung: () => void;
+  onOpenTarikReservasi: () => void;
 }
 
 export function POSHeader({
@@ -23,6 +24,7 @@ export function POSHeader({
   totalRevenue = 2500000,
   onOpenSidebar,
   onOpenFakturGantung,
+  onOpenTarikReservasi,
 }: POSHeaderProps) {
   // Format tanggal hari ini
   const today = new Date().toLocaleDateString('id-ID', {
@@ -76,13 +78,23 @@ export function POSHeader({
           <span className="text-sm font-black text-[#4B3832]">{totalOrders} Transaksi</span>
         </div>
 
+        {/* Tarik Reservasi Button */}
+        <button
+          type="button"
+          onClick={onOpenTarikReservasi}
+          className="relative inline-flex items-center gap-2 bg-[#4B3832] border border-[#4B3832] px-4 py-2 rounded-full font-bold text-sm text-[#FFFDF7] hover:bg-[#6F4E37] transition-colors shadow-sm"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+          <span className="hidden sm:inline">Tarik Reservasi</span>
+        </button>
+
         {/* Faktur Gantung Button */}
         <button
           type="button"
           onClick={onOpenFakturGantung}
           className="relative inline-flex items-center gap-2 bg-white border border-[#DCC7AA] px-4 py-2 rounded-full font-bold text-sm text-[#4B3832] hover:bg-[#F5E6CA] transition-colors group"
         >
-          <span>Faktur Gantung</span>
+          <span className="hidden sm:inline">Faktur Gantung</span>
           {openOrdersCount > 0 && (
             <span className="bg-[#ef4444] text-white font-extrabold px-1.5 py-0.5 rounded-full text-[10px]">
               {openOrdersCount}

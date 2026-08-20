@@ -46,8 +46,8 @@ async function seed() {
 
     console.log('🎉 Berhasil membuat akun Owner!');
     console.log('-----------------------------------');
-    console.log('Username : owner');
-    console.log('Password : thatha123');
+    console.log('Username : taufikowner@gmail.com');
+    console.log('Password : ownerdapoer#12');
     console.log('-----------------------------------');
 
     process.exit(0);
