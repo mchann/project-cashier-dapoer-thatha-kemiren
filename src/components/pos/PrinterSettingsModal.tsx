@@ -37,7 +37,7 @@ export function PrinterSettingsModal({ isOpen, onClose }: PrinterSettingsModalPr
       setIsScanning(true);
 
       // Cek dukungan Web Bluetooth
-      if (!navigator.bluetooth) {
+      if (!(navigator as any).bluetooth) {
         throw new Error('Web Bluetooth tidak didukung di browser ini. Harap gunakan Chrome atau Edge.');
       }
 
