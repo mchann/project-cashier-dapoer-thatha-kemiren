@@ -97,24 +97,26 @@ export function PaymentModal({
               <button
                 type="button"
                 onClick={() => setPaymentMethod('tunai')}
-                className={`py-3 rounded-xl font-bold border-2 transition-all ${
+                className={`py-3 rounded-xl font-bold border-2 transition-all flex items-center justify-center gap-2 ${
                   paymentMethod === 'tunai' 
                     ? 'bg-[#6F4E37] text-white border-[#6F4E37]' 
                     : 'bg-[#FFFDF7] text-[#6F4E37] border-[#DCC7AA] hover:bg-[#F5E6CA]'
                 }`}
               >
-                💵 Tunai
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                Tunai
               </button>
               <button
                 type="button"
                 onClick={() => setPaymentMethod('qris')}
-                className={`py-3 rounded-xl font-bold border-2 transition-all ${
+                className={`py-3 rounded-xl font-bold border-2 transition-all flex items-center justify-center gap-2 ${
                   paymentMethod === 'qris' 
                     ? 'bg-[#6F4E37] text-white border-[#6F4E37]' 
                     : 'bg-[#FFFDF7] text-[#6F4E37] border-[#DCC7AA] hover:bg-[#F5E6CA]'
                 }`}
               >
-                📱 QRIS
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path></svg>
+                QRIS
               </button>
             </div>
 
