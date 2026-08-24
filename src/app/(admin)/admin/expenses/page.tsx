@@ -26,10 +26,11 @@ export default function ExpensesPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Filter & Pagination
-  const [viewMode, setViewMode] = useState<'today' | 'all'>('today');
+  const [viewMode, setViewMode] = useState<'today' | 'month' | 'range' | 'all'>('today');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('semua');
-  const [dateFilter, setDateFilter] = useState<string>(''); // Filter kalender (opsional)
+  const [startDate, setStartDate] = useState<string>(''); 
+  const [endDate, setEndDate] = useState<string>(''); 
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
@@ -152,8 +153,17 @@ export default function ExpensesPage() {
       if (viewMode === 'today') {
         const todayStr = new Date().toISOString().split('T')[0];
         matchDate = e.date.startsWith(todayStr);
-      } else if (dateFilter !== '') {
-        matchDate = e.date.startsWith(dateFilter);
+      } else if (viewMode === 'month') {
+        const monthStr = new Date().toISOString().slice(0, 7); // YYYY-MM
+        matchDate = e.date.startsWith(monthStr);
+      } else if (viewMode === 'range') {
+        if (startDate && endDate) {
+          matchDate = e.date >= startDate && e.date <= endDate;
+        } else if (startDate) {
+          matchDate = e.date >= startDate;
+        } else if (endDate) {
+          matchDate = e.date <= endDate;
+        }
       }
 
       // 3. Search Query
@@ -167,7 +177,7 @@ export default function ExpensesPage() {
   // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [categoryFilter, dateFilter, viewMode, searchQuery]);
+  }, [categoryFilter, startDate, endDate, viewMode, searchQuery]);
 
   // Paginate Data
   const paginatedExpenses = useMemo(() => {
@@ -226,18 +236,30 @@ export default function ExpensesPage() {
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
             
             {/* View Mode Toggle */}
-            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl shadow-inner shrink-0 w-full md:w-auto">
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl shadow-inner shrink-0 w-full md:w-auto overflow-x-auto hide-scrollbar">
               <button 
                 onClick={() => setViewMode('today')}
-                className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-black transition-all ${viewMode === 'today' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`flex-none px-4 py-2 rounded-lg text-sm font-black whitespace-nowrap transition-all ${viewMode === 'today' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 Hari Ini
               </button>
               <button 
-                onClick={() => setViewMode('all')}
-                className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-black transition-all ${viewMode === 'all' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                onClick={() => setViewMode('month')}
+                className={`flex-none px-4 py-2 rounded-lg text-sm font-black whitespace-nowrap transition-all ${viewMode === 'month' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               >
-                Semua Riwayat
+                Bulan Ini
+              </button>
+              <button 
+                onClick={() => setViewMode('range')}
+                className={`flex-none px-4 py-2 rounded-lg text-sm font-black whitespace-nowrap transition-all ${viewMode === 'range' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Rentang Waktu
+              </button>
+              <button 
+                onClick={() => setViewMode('all')}
+                className={`flex-none px-4 py-2 rounded-lg text-sm font-black whitespace-nowrap transition-all ${viewMode === 'all' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Semua
               </button>
             </div>
 
@@ -268,26 +290,22 @@ export default function ExpensesPage() {
               ))}
             </div>
 
-            {/* Filter Tanggal Khusus (Jika View Mode = All) */}
-            {viewMode === 'all' && (
+            {/* Filter Tanggal Khusus (Jika View Mode = Range) */}
+            {viewMode === 'range' && (
               <div className="flex items-center gap-2 w-full md:w-auto bg-[#FFFDF7] border border-[#DCC7AA] rounded-xl px-4 py-1.5 shadow-sm">
-                <label htmlFor="expense-date" className="text-xs font-bold text-[#6F4E37] whitespace-nowrap">Tanggal:</label>
                 <input
-                  id="expense-date"
                   type="date"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
                   className="bg-transparent border-none outline-none font-bold text-sm text-[#4B3832]"
                 />
-                {dateFilter && (
-                  <button 
-                    onClick={() => setDateFilter('')}
-                    className="p-1 rounded-full text-red-500 hover:bg-red-50 ml-1"
-                    title="Hapus Filter Tanggal"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                  </button>
-                )}
+                <span className="text-[#6F4E37] font-bold text-xs">-</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-transparent border-none outline-none font-bold text-sm text-[#4B3832]"
+                />
               </div>
             )}
           </div>
