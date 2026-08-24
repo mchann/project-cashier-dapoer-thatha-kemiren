@@ -166,6 +166,12 @@ export function OrderCart({
               disabled={orderType === 'takeaway'}
               value={orderType === 'takeaway' ? 'TA' : tableNumber}
               onChange={(e) => onUpdateTableNumber(e.target.value)}
+              onBlur={(e) => {
+                const val = e.target.value.trim();
+                if (/^[1-9]$/.test(val)) {
+                  onUpdateTableNumber(`0${val}`);
+                }
+              }}
               placeholder="00"
               className={`w-full bg-transparent border border-[#DCC7AA] focus:border-[#4B3832] rounded-xl px-3 py-2 font-bold text-xs text-[#4B3832] outline-none transition-all ${
                 orderType === 'takeaway' ? 'opacity-50 cursor-not-allowed' : ''

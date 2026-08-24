@@ -221,7 +221,19 @@ export default function OrderPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider mb-2 opacity-80">Nomor Meja</label>
-                    <input type="text" value={tableNumber} onChange={(e) => setTableNumber(e.target.value)} placeholder="Misal: 5 (Opsional)" className={`w-full bg-transparent border rounded-2xl px-4 py-4 outline-none focus:ring-1 transition-all ${isDarkMode ? 'border-[#e5d3b3]/30 focus:border-[#e5d3b3] focus:ring-[#e5d3b3]' : 'border-[#DCC7AA] focus:border-[#4B3832] focus:ring-[#4B3832]'}`} />
+                    <input 
+                      type="text" 
+                      value={tableNumber} 
+                      onChange={(e) => setTableNumber(e.target.value)} 
+                      onBlur={(e) => {
+                        const val = e.target.value.trim();
+                        if (/^[1-9]$/.test(val)) {
+                          setTableNumber(`0${val}`);
+                        }
+                      }}
+                      placeholder="Misal: 5 (Opsional)" 
+                      className={`w-full bg-transparent border rounded-2xl px-4 py-4 outline-none focus:ring-1 transition-all ${isDarkMode ? 'border-[#e5d3b3]/30 focus:border-[#e5d3b3] focus:ring-[#e5d3b3]' : 'border-[#DCC7AA] focus:border-[#4B3832] focus:ring-[#4B3832]'}`} 
+                    />
                   </div>
                 </div>
 
