@@ -6,8 +6,10 @@ import { Order } from '@/types/pos';
 import { POSHeader } from '@/components/pos/POSHeader';
 import { POSSidebar } from '@/components/pos/POSSidebar';
 import { PrinterSettingsModal } from '@/components/pos/PrinterSettingsModal';
+import { useSession } from 'next-auth/react';
 
 export default function OrderHistoryPage() {
+  const { data: session } = useSession();
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all'|'paid'|'void'|'reservation'>('all');
@@ -119,7 +121,8 @@ export default function OrderHistoryPage() {
 
       {/* Header Utama Kasir */}
       <POSHeader
-        cashierName="Siti (Kasir 01)"
+        cashierName={session?.user?.name || 'Kasir'}
+        shiftName={session?.user?.role || 'Staff'}
         openOrdersCount={dashboardStats.pendingCount}
         totalOrders={dashboardStats.transactionsCount}
         totalRevenue={dashboardStats.revenueToday}
