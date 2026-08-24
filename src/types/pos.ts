@@ -32,6 +32,7 @@ export interface OrderItem {
 
 export type OrderType = 'dine_in' | 'takeaway' | 'reservation' | 'qr_order';
 export type PaymentStatus = 'unpaid' | 'dp_paid' | 'paid' | 'void';
+export type PaymentMethod = 'tunai' | 'qris';
 
 export interface Order {
   _id: string;
@@ -40,6 +41,7 @@ export interface Order {
   customerName: string;
   orderType: OrderType;
   paymentStatus: PaymentStatus;
+  paymentMethod?: PaymentMethod;
   items: OrderItem[];
   voidedItems?: {
     name: string;

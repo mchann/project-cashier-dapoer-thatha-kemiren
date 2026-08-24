@@ -343,7 +343,7 @@ export default function POSPage() {
 
 
   // --- Handler Bayar Lunas ---
-    const handleConfirmPayment = useCallback(async (amountReceived: number, change: number) => {
+    const handleConfirmPayment = useCallback(async (amountReceived: number, change: number, paymentMethod: 'tunai' | 'qris') => {
     if (cartItems.length === 0) return;
     const subtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
     
@@ -367,6 +367,7 @@ export default function POSPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             paymentStatus: 'paid',
+            paymentMethod,
             amountReceived,
             changeAmount: change
           })
@@ -382,6 +383,7 @@ export default function POSPage() {
             customerName: customerName || (orderType === 'takeaway' ? 'Bungkus' : 'Makan Sini'),
             orderType,
             paymentStatus: 'paid',
+            paymentMethod,
             items: cartItems,
             subtotal,
             dpAmount,

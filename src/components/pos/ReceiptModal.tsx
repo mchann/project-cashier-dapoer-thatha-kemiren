@@ -167,14 +167,20 @@ export function ReceiptModal({ isOpen, transactionData, onClose }: ReceiptModalP
                 <span>TOTAL</span>
                 <span>{formatRupiah(transactionData.grandTotal)}</span>
               </div>
-              <div className="flex justify-between mt-2">
-                <span>Tunai</span>
+              <div className="flex justify-between mt-2 font-bold">
+                <span>Metode Bayar</span>
+                <span className="uppercase">{transactionData.paymentMethod === 'qris' ? 'QRIS' : 'Tunai'}</span>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span>{transactionData.paymentMethod === 'qris' ? 'Nominal QRIS' : 'Tunai Diterima'}</span>
                 <span>{formatRupiah(transactionData.amountReceived || 0)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Kembali</span>
-                <span>{formatRupiah(transactionData.changeAmount || 0)}</span>
-              </div>
+              {(!transactionData.paymentMethod || transactionData.paymentMethod === 'tunai') && (
+                <div className="flex justify-between">
+                  <span>Kembali</span>
+                  <span>{formatRupiah(transactionData.changeAmount || 0)}</span>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-dashed border-gray-400 my-2"></div>

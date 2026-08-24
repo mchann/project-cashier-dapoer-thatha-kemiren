@@ -18,7 +18,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const resolvedParams = await params;
     const transactionId = resolvedParams.id;
     const body = await req.json();
-    const { paymentStatus, amountReceived, changeAmount } = body;
+    const { paymentStatus, amountReceived, changeAmount, paymentMethod } = body;
 
     const transaction = await Transaction.findById(transactionId);
     if (!transaction) {
@@ -27,6 +27,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     // Update status bayar
     transaction.paymentStatus = paymentStatus;
+    if (paymentMethod !== undefined) transaction.paymentMethod = paymentMethod;
     if (amountReceived !== undefined) transaction.amountReceived = amountReceived;
     if (changeAmount !== undefined) transaction.changeAmount = changeAmount;
 

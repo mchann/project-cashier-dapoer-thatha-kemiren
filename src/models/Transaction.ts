@@ -14,6 +14,7 @@ export interface ITransaction extends Document {
   customerName: string;
   orderType: 'dine_in' | 'takeaway' | 'reservation' | 'qr_order';
   paymentStatus: 'unpaid' | 'dp_paid' | 'paid' | 'void';
+  paymentMethod?: 'tunai' | 'qris';
   items: ITransactionItem[];
   subtotal: number;
   dpAmount: number;
@@ -56,6 +57,10 @@ const TransactionSchema = new Schema<ITransaction>(
       enum: ['unpaid', 'dp_paid', 'paid', 'void'],
       required: true,
       default: 'paid',
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['tunai', 'qris'],
     },
     items: [TransactionItemSchema],
     subtotal: { type: Number, required: true },

@@ -57,7 +57,8 @@ export async function POST(req: Request) {
       guideName,
       grandTotal,
       amountReceived,
-      changeAmount
+      changeAmount,
+      paymentMethod
     } = body;
 
     // Validasi input dasar
@@ -142,6 +143,7 @@ export async function POST(req: Request) {
       grandTotal,
       amountReceived,
       changeAmount,
+      paymentMethod,
       cashierName: session.user.name || session.user.username || 'Kasir',
       cashierId: new mongoose.Types.ObjectId(session.user.id),
     });

@@ -289,7 +289,16 @@ export default function OrderHistoryPage() {
                             </td>
                             <td className="px-5 py-4 font-bold">{order.customerName}</td>
                             <td className="px-5 py-4 text-right">
-                              <span className="font-black text-base">{formatRupiah(order.grandTotal)}</span>
+                              <span className="font-black text-base block">{formatRupiah(order.grandTotal)}</span>
+                              {order.paymentMethod && order.paymentStatus === 'paid' && (
+                                <span className={`inline-block mt-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${
+                                  order.paymentMethod === 'qris' 
+                                    ? 'bg-blue-50 text-blue-600 border-blue-200' 
+                                    : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                }`}>
+                                  {order.paymentMethod}
+                                </span>
+                              )}
                             </td>
                             <td className="px-5 py-4 text-center">
                               <button 

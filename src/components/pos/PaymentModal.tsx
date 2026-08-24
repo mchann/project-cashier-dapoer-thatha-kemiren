@@ -2,12 +2,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import type { PaymentMethod } from '@/types/pos';
 
 interface PaymentModalProps {
   isOpen: boolean;
   grandTotal: number;
   onClose: () => void;
-  onConfirmPayment: (amountReceived: number, change: number) => void;
+  onConfirmPayment: (amountReceived: number, change: number, paymentMethod: PaymentMethod) => void;
 }
 
 export function PaymentModal({
@@ -17,6 +18,7 @@ export function PaymentModal({
   onConfirmPayment,
 }: PaymentModalProps) {
   const [amountReceivedStr, setAmountReceivedStr] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('tunai');
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -24,6 +26,7 @@ export function PaymentModal({
     if (isOpen) {
       timeoutId = setTimeout(() => {
         setAmountReceivedStr('');
+        setPaymentMethod('tunai');
       }, 0);
     }
     return () => clearTimeout(timeoutId);
@@ -31,7 +34,7 @@ export function PaymentModal({
 
   if (!isOpen) return null;
 
-  const amountReceived = parseInt(amountReceivedStr.replace(/\D/g, ''), 10) || 0;
+  const amountReceived = paymentMethod === 'qris' ? grandTotal : (parseInt(amountReceivedStr.replace(/\D/g, ''), 10) || 0);
   const change = amountReceived - grandTotal;
   const isSufficient = amountReceived >= grandTotal;
 
@@ -56,7 +59,7 @@ export function PaymentModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isSufficient) {
-      onConfirmPayment(amountReceived, change);
+      onConfirmPayment(amountReceived, change, paymentMethod);
     }
   };
 
@@ -74,7 +77,7 @@ export function PaymentModal({
                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
              </div>
             <h2 className="text-base font-black text-[#FFFDF7] tracking-wide">
-              Pembayaran Tunai
+              Pembayaran
             </h2>
           </div>
           <button
@@ -89,55 +92,85 @@ export function PaymentModal({
         <div className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             
+            {/* Payment Method Selection */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('tunai')}
+                className={`py-3 rounded-xl font-bold border-2 transition-all ${
+                  paymentMethod === 'tunai' 
+                    ? 'bg-[#6F4E37] text-white border-[#6F4E37]' 
+                    : 'bg-[#FFFDF7] text-[#6F4E37] border-[#DCC7AA] hover:bg-[#F5E6CA]'
+                }`}
+              >
+                💵 Tunai
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('qris')}
+                className={`py-3 rounded-xl font-bold border-2 transition-all ${
+                  paymentMethod === 'qris' 
+                    ? 'bg-[#6F4E37] text-white border-[#6F4E37]' 
+                    : 'bg-[#FFFDF7] text-[#6F4E37] border-[#DCC7AA] hover:bg-[#F5E6CA]'
+                }`}
+              >
+                📱 QRIS
+              </button>
+            </div>
+
             {/* Total Tagihan */}
             <div className="text-center bg-[#F5E6CA]/50 py-4 rounded-2xl border border-[#DCC7AA]/40">
               <span className="block text-xs font-bold text-[#6F4E37] uppercase tracking-wider mb-1">Total Tagihan</span>
               <span className="text-4xl font-black text-[#4B3832]">{formatRupiah(grandTotal)}</span>
             </div>
 
-            {/* Input Nominal */}
-            <div>
-              <label htmlFor="amount-received" className="block text-sm font-bold text-[#4B3832] mb-2 text-center">
-                Uang Diterima
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-2xl text-[#8B7355]">Rp</span>
-                <input
-                  id="amount-received"
-                  type="text"
-                  value={amountReceivedStr ? new Intl.NumberFormat('id-ID').format(amountReceived) : ''}
-                  onChange={handleChangeInput}
-                  placeholder="0"
-                  autoFocus
-                  className="w-full bg-white border-2 border-[#DCC7AA] rounded-2xl pl-14 pr-4 py-4 font-black text-3xl text-[#4B3832] text-right focus:border-[#4B3832] outline-none transition-all"
-                />
-              </div>
-            </div>
+            {paymentMethod === 'tunai' && (
+              <>
+                {/* Input Nominal */}
+                <div>
+                  <label htmlFor="amount-received" className="block text-sm font-bold text-[#4B3832] mb-2 text-center">
+                    Uang Diterima
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-2xl text-[#8B7355]">Rp</span>
+                    <input
+                      id="amount-received"
+                      type="text"
+                      value={amountReceivedStr ? new Intl.NumberFormat('id-ID').format(amountReceived) : ''}
+                      onChange={handleChangeInput}
+                      placeholder="0"
+                      autoFocus
+                      className="w-full bg-white border-2 border-[#DCC7AA] rounded-2xl pl-14 pr-4 py-4 font-black text-3xl text-[#4B3832] text-right focus:border-[#4B3832] outline-none transition-all"
+                    />
+                  </div>
+                </div>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickAmount(grandTotal)}
-                className="py-2.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl font-black text-xs transition-colors border border-emerald-200"
-              >
-                Uang Pas
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickAmount(50000)}
-                className="py-2.5 bg-[#FFFDF7] hover:bg-[#F5E6CA] border border-[#DCC7AA] text-[#4B3832] rounded-xl font-bold text-xs transition-colors"
-              >
-                50.000
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickAmount(100000)}
-                className="py-2.5 bg-[#FFFDF7] hover:bg-[#F5E6CA] border border-[#DCC7AA] text-[#4B3832] rounded-xl font-bold text-xs transition-colors"
-              >
-                100.000
-              </button>
-            </div>
+                {/* Quick Actions */}
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAmount(grandTotal)}
+                    className="py-2.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl font-black text-xs transition-colors border border-emerald-200"
+                  >
+                    Uang Pas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAmount(50000)}
+                    className="py-2.5 bg-[#FFFDF7] hover:bg-[#F5E6CA] border border-[#DCC7AA] text-[#4B3832] rounded-xl font-bold text-xs transition-colors"
+                  >
+                    50.000
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickAmount(100000)}
+                    className="py-2.5 bg-[#FFFDF7] hover:bg-[#F5E6CA] border border-[#DCC7AA] text-[#4B3832] rounded-xl font-bold text-xs transition-colors"
+                  >
+                    100.000
+                  </button>
+                </div>
+              </>
+            )}
 
             {/* Kembalian */}
             <div className="pt-4 border-t border-[#DCC7AA]/40 flex justify-between items-center">

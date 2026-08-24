@@ -64,6 +64,12 @@ export function TransactionModal({ transaction, isOpen, onClose }: TransactionMo
              <span className="text-gray-500">Kasir</span>
              <span className="font-bold text-[#4B3832]">{transaction.cashierName || '-'}</span>
            </div>
+           {transaction.paymentMethod && (
+             <div className="flex justify-between mt-2">
+               <span className="text-gray-500">Metode Bayar</span>
+               <span className="font-bold uppercase text-[#4B3832]">{transaction.paymentMethod}</span>
+             </div>
+           )}
         </div>
 
         {/* Item List */}
