@@ -19,7 +19,14 @@ export async function GET() {
     }
 
     // Mengambil semua transaksi lunas, diurutkan dari terbaru
-    const transactions = await Transaction.find({ paymentStatus: { $in: ['paid', 'void'] } }).sort({ createdAt: -1 });
+    const query: any = { paymentStatus: { $in: ['paid', 'void'] } };
+    
+    // Jika bukan superadmin, hanya tampilkan transaksi miliknya sendiri
+    if (session.user.role !== 'superadmin') {
+      query.cashierId = session.user.id;
+    }
+
+    const transactions = await Transaction.find(query).sort({ createdAt: -1 });
     
     return NextResponse.json(transactions);
   } catch (error) {

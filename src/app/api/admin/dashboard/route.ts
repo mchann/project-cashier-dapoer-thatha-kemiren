@@ -20,10 +20,16 @@ export async function GET() {
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    const todayTransactions = await Transaction.find({
+    const query: any = {
       createdAt: { $gte: startOfDay, $lte: endOfDay },
       paymentStatus: 'paid'
-    });
+    };
+
+    if (session.user.role !== 'superadmin') {
+      query.cashierId = session.user.id;
+    }
+
+    const todayTransactions = await Transaction.find(query);
 
     const revenueToday = todayTransactions.reduce((sum, t) => sum + t.grandTotal, 0);
     const transactionsCount = todayTransactions.length;
