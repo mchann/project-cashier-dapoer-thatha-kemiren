@@ -43,8 +43,17 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             {formatRupiah(product.price)}
           </span>
           {!isOutOfStock && (
-            <span className="text-[10px] font-bold text-[#8B7355] bg-[#F5E6CA]/50 px-1.5 py-0.5 rounded">
-              Stok: {product.stock}
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${
+              product.stock <= 5 
+                ? 'text-red-600 bg-red-50' 
+                : 'text-[#8B7355] bg-[#F5E6CA]/50'
+            }`}>
+              {product.stock <= 5 && (
+                <svg className="w-3 h-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              )}
+              {product.stock <= 5 ? `Sisa ${product.stock}` : `Stok: ${product.stock}`}
             </span>
           )}
         </div>

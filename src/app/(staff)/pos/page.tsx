@@ -143,6 +143,10 @@ export default function POSPage() {
     setCartItems((prev) => {
       const idx = prev.findIndex((item) => item.productId === product._id);
       if (idx > -1) {
+        if (prev[idx].quantity >= product.stock) {
+          showNotification(`Stok ${product.name} tidak mencukupi (sisa ${product.stock})`);
+          return prev;
+        }
         const updated = [...prev];
         updated[idx] = {
           ...updated[idx],
@@ -175,11 +179,18 @@ export default function POSPage() {
         return prev.filter((i) => i.productId !== productId);
       }
       
+      // Validasi batas stok maksimum
+      const product = products.find(p => p._id === productId);
+      if (product && nextQty > product.stock) {
+        showNotification(`Stok ${product.name} tidak mencukupi (sisa ${product.stock})`);
+        return prev;
+      }
+      
       const updated = [...prev];
       updated[itemIndex] = { ...item, quantity: nextQty };
       return updated;
     });
-  }, []);
+  }, [products, showNotification]);
 
   // --- Handler Hapus Item dari Keranjang ---
   const handleRemoveItem = useCallback((productId: string) => {
