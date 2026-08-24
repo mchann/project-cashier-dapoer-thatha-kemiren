@@ -4,12 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Product, OrderItem, Order, Category } from '@/types/pos';
 import { AppliedGuideVoucher } from '@/components/pos/TravelPartnerSelector';
-import {
-  DUMMY_CATEGORIES,
-  DUMMY_PRODUCTS,
-  DUMMY_PARTNERS,
-  DUMMY_FAKTUR_GANTUNG,
-} from '@/lib/dummy-pos-data';
+
 import { POSHeader } from '@/components/pos/POSHeader';
 import { POSSidebar } from '@/components/pos/POSSidebar';
 import { PrinterSettingsModal } from '@/components/pos/PrinterSettingsModal';
@@ -69,8 +64,8 @@ export default function POSPage() {
   }, []);
 
   // --- Data dari Database ---
-  const [categories, setCategories] = useState<Category[]>(DUMMY_CATEGORIES);
-  const [products, setProducts] = useState<Product[]>(DUMMY_PRODUCTS);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   const fetchData = useCallback(async () => {
     try {
