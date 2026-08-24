@@ -192,7 +192,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error('Transaction Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Gagal memproses transaksi' },
+      { error: 'Gagal memproses transaksi' },
       { status: 500 }
     );
   }

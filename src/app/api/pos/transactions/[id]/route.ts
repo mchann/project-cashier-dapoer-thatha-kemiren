@@ -36,7 +36,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json(transaction);
   } catch (error: any) {
     console.error('Update transaction error:', error);
-    return NextResponse.json({ error: 'Gagal memperbarui transaksi' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Gagal memperbarui transaksi' }, { status: 500 });
   }
 }
 
