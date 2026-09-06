@@ -4,8 +4,10 @@ export interface IProduct extends Document {
   name: string;
   description?: string;
   price: number;
-  stock: number;
+  stock?: number;
   image?: string;
+  isUnlimited: boolean;
+  rawMaterialId?: mongoose.Types.ObjectId;
   categoryId: mongoose.Types.ObjectId;
   isAvailable: boolean;
   createdAt: Date;
@@ -31,9 +33,16 @@ const ProductSchema = new Schema<IProduct>(
     },
     stock: {
       type: Number,
-      required: [true, 'Stok wajib diisi'],
       min: [0, 'Stok tidak boleh negatif'],
       default: 0,
+    },
+    isUnlimited: {
+      type: Boolean,
+      default: false,
+    },
+    rawMaterialId: {
+      type: Schema.Types.ObjectId,
+      ref: 'RawMaterial'
     },
     image: {
       type: String,
@@ -53,5 +62,7 @@ const ProductSchema = new Schema<IProduct>(
   { timestamps: true }
 );
 
-export const Product: Model<IProduct> =
-  mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
+if (mongoose.models.Product) {
+  delete mongoose.models.Product;
+}
+export const Product: Model<IProduct> = mongoose.model<IProduct>('Product', ProductSchema);

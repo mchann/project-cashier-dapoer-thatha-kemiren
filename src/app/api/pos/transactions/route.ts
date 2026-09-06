@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectMongo from '@/lib/mongodb';
 import Transaction from '@/models/Transaction';
 import { Product } from '@/models/Product';
+import { RawMaterial } from '@/models/RawMaterial';
 import { GuideVoucher } from '@/models/GuideVoucher';
 import ActivityLog from '@/models/ActivityLog';
 import { getServerSession } from 'next-auth';
@@ -76,15 +77,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Uang yang diterima kurang' }, { status: 400 });
     }
 
-    // --- LOGIKA PENGURANGAN STOK DENGAN VALIDASI ---
-    // Karena kita tidak memakai session database MongoDb (perlu replica set),
-    // kita cek manual ketersediaan stok lalu kita potong menggunakan bulkWrite.
-
+    // --- LOGIKA PENGURANGAN STOK BAHAN BAKU ---
     // 1. Ambil semua ID produk yang dibeli
     const productIds = items.map((item: any) => item.productId);
-    const productsInDb = await Product.find({ _id: { $in: productIds } });
+    const productsInDb = await Product.find({ _id: { $in: productIds } }).populate('rawMaterialId');
 
-    // 2. Cek apakah ada menu yang tidak ditemukan atau stoknya kurang
+    // 2. Kumpulkan rawMaterialId yang terpengaruh dan hitung total permintaan per bahan baku
+    const rawMaterialRequests: Record<string, number> = {};
+    const itemNamesMap: Record<string, string[]> = {}; // Untuk logging jika habis
+
     for (const item of items) {
       const dbProduct = productsInDb.find((p) => p._id.toString() === item.productId.toString());
       
@@ -92,45 +93,80 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: `Menu ${item.name} tidak ditemukan di database` }, { status: 404 });
       }
 
-      if (dbProduct.stock < item.quantity) {
+      // Jika menu unlimited, tidak perlu potong stok
+      if (dbProduct.isUnlimited) continue;
+
+      // Jika tidak unlimited tapi tidak punya bahan baku
+      if (!dbProduct.rawMaterialId) {
+        return NextResponse.json({ error: `Menu ${item.name} tidak diset sebagai unlimited tetapi tidak memiliki bahan baku yang tertaut.` }, { status: 400 });
+      }
+
+      const rmId = (dbProduct.rawMaterialId as any)._id.toString();
+      if (!rawMaterialRequests[rmId]) {
+        rawMaterialRequests[rmId] = 0;
+        itemNamesMap[rmId] = [];
+      }
+      rawMaterialRequests[rmId] += item.quantity;
+      if (!itemNamesMap[rmId].includes(dbProduct.name)) {
+        itemNamesMap[rmId].push(dbProduct.name);
+      }
+    }
+
+    // 3. Cek apakah stok bahan baku cukup
+    const rmIdsToUpdate = Object.keys(rawMaterialRequests);
+    let rawMaterialsInDb = [];
+    
+    if (rmIdsToUpdate.length > 0) {
+      rawMaterialsInDb = await RawMaterial.find({ _id: { $in: rmIdsToUpdate } });
+
+      for (const rmId of rmIdsToUpdate) {
+        const rm = rawMaterialsInDb.find(r => r._id.toString() === rmId);
+        if (!rm) {
+          return NextResponse.json({ error: `Bahan baku dengan ID ${rmId} tidak ditemukan.` }, { status: 404 });
+        }
+        if (rm.stock < rawMaterialRequests[rmId]) {
+          return NextResponse.json(
+            { error: `Stok bahan baku "${rm.name}" tidak cukup untuk menu (${itemNamesMap[rmId].join(', ')}). Sisa: ${rm.stock} ${rm.unit}, Diminta: ${rawMaterialRequests[rmId]} ${rm.unit}` },
+            { status: 400 }
+          );
+        }
+      }
+
+      // 4. Buat operasi BulkWrite untuk mengurangi stok bahan baku
+      const bulkOps = rmIdsToUpdate.map(rmId => ({
+        updateOne: {
+          filter: { _id: rmId, stock: { $gte: rawMaterialRequests[rmId] } }, // Race condition guard
+          update: { $inc: { stock: -rawMaterialRequests[rmId] } }
+        }
+      }));
+
+      // Cek stok habis untuk dilog
+      const stockLogs: any[] = [];
+      for (const rmId of rmIdsToUpdate) {
+        const rm = rawMaterialsInDb.find(r => r._id.toString() === rmId);
+        if (rm && (rm.stock - rawMaterialRequests[rmId] <= 0)) {
+          stockLogs.push({
+            title: 'Bahan Baku Habis',
+            message: `Stok bahan baku "${rm.name}" habis setelah transaksi ini!`,
+            type: 'warning',
+            targetRole: 'admin'
+          });
+        }
+      }
+
+      const bulkResult = await RawMaterial.bulkWrite(bulkOps);
+
+      if (bulkResult.modifiedCount < rmIdsToUpdate.length) {
         return NextResponse.json(
-          { error: `Stok tidak cukup untuk ${item.name}. Sisa: ${dbProduct.stock}, Diminta: ${item.quantity}` },
-          { status: 400 }
+          { error: 'Terjadi konflik stok (mungkin baru saja dibeli kasir lain). Silakan ulangi transaksi.' },
+          { status: 409 }
         );
       }
-    }
 
-    // 3. Buat operasi BulkWrite untuk mengurangi stok
-    const bulkOps = items.map((item: any) => ({
-      updateOne: {
-        filter: { _id: item.productId, stock: { $gte: item.quantity } }, // Pastikan tidak tembus 0 (race condition guard)
-        update: { $inc: { stock: -item.quantity } }
+      // Simpan log secara asinkron
+      if (stockLogs.length > 0) {
+        ActivityLog.insertMany(stockLogs).catch(err => console.error('Failed to save stock logs:', err));
       }
-    }));
-
-    // Cek stok habis untuk dilog
-    const stockLogs: any[] = [];
-    for (const item of items) {
-      const dbProduct = productsInDb.find((p) => p._id.toString() === item.productId.toString());
-      if (dbProduct && (dbProduct.stock - item.quantity <= 0)) {
-        stockLogs.push({
-          title: 'Stok Habis / Menipis',
-          message: `Stok menu ${item.name} habis setelah pesanan ini!`,
-          type: 'warning',
-          targetRole: 'admin'
-        });
-      }
-    }
-
-    const bulkResult = await Product.bulkWrite(bulkOps);
-
-    // Jika jumlah yang berhasil diupdate kurang dari jumlah jenis item, 
-    // berarti ada race condition di mana stok habis di tengah-tengah oleh kasir lain.
-    if (bulkResult.modifiedCount < items.length) {
-      return NextResponse.json(
-        { error: 'Terjadi konflik stok (mungkin baru saja dibeli kasir lain). Silakan ulangi transaksi.' },
-        { status: 409 }
-      );
     }
 
     // 4. Jika potong stok berhasil, simpan Transaksi

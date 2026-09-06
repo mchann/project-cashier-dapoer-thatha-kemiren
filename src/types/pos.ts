@@ -11,7 +11,9 @@ export interface Product {
   name: string;
   description?: string;
   price: number;
-  stock: number; // Porsi matang siap jual
+  stock?: number;
+  isUnlimited: boolean;
+  rawMaterialId?: any; // Bisa string atau object saat dipopulate
   image?: string;
   categoryId: string;
   category?: {

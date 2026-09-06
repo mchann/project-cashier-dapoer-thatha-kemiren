@@ -33,6 +33,7 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
       ]
     },
     { name: 'Kelola Menu', href: '/admin/menu', icon: MenuIcon },
+    { name: 'Stok Bahan Baku', href: '/admin/inventory', icon: MenuIcon },
     { name: 'Kelola Staff', href: '/admin/staff', icon: UsersIcon },
     { name: 'Manajemen Guide', href: '/admin/guides', icon: UsersIcon },
     { name: 'Pengaturan', href: '/admin/settings', icon: SettingsIcon },

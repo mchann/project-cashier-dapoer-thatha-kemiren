@@ -140,44 +140,6 @@ export default function AdminMenuPage() {
     }
   };
 
-    const handleAdjustStock = async (productId: string, delta: number) => {
-    try {
-      const prod = products.find(p => p._id === productId);
-      if (!prod) return;
-      const newStock = Math.max(0, prod.stock + delta);
-      
-      const res = await fetch(`/api/admin/products/${productId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...prod, categoryId: prod.categoryId || prod.category?._id, stock: newStock, isAvailable: newStock > 0 ? prod.isAvailable : false }),
-      });
-      if (!res.ok) throw new Error('Gagal memperbarui stok');
-      showNotification('Stok berhasil diperbarui.');
-      fetchData();
-    } catch (error: any) {
-      alert(error.message);
-    }
-  };
-
-  const handleSetStock = async (productId: string, newStock: number) => {
-    try {
-      const prod = products.find(p => p._id === productId);
-      if (!prod) return;
-      if (newStock < 0) newStock = 0;
-      
-      const res = await fetch(`/api/admin/products/${productId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...prod, categoryId: prod.categoryId || prod.category?._id, stock: newStock, isAvailable: newStock > 0 ? prod.isAvailable : false }),
-      });
-      if (!res.ok) throw new Error('Gagal memperbarui stok');
-      showNotification('Stok berhasil diperbarui.');
-      fetchData();
-    } catch (error: any) {
-      alert(error.message);
-    }
-  };
-
     const handleToggleAvailable = async (productId: string, currentStatus: boolean) => {
     try {
       const prod = products.find(p => p._id === productId);
@@ -400,8 +362,6 @@ export default function AdminMenuPage() {
               products={filteredProducts}
               onEditProduct={handleOpenEditProduct}
               onDeleteProduct={handleDeleteProduct}
-              onAdjustStock={handleAdjustStock}
-              onSetStock={handleSetStock}
               onToggleAvailable={handleToggleAvailable}
             />
           </div>

@@ -14,12 +14,12 @@ export async function PUT(req: Request, { params }: Params) {
   try {
     await connectMongo();
     const body = await req.json();
-    const { name, description, price, stock, image, categoryId, isAvailable } = body;
+    const { name, description, price, image, categoryId, isAvailable, isUnlimited, rawMaterialId } = body;
     const { id } = await params;
 
-    if (!name || price === undefined || stock === undefined || !categoryId) {
+    if (!name || price === undefined || !categoryId) {
       return NextResponse.json(
-        { error: 'Nama, harga, stok, dan kategori wajib diisi' },
+        { error: 'Nama, harga, dan kategori wajib diisi' },
         { status: 400 }
       );
     }
@@ -34,28 +34,18 @@ export async function PUT(req: Request, { params }: Params) {
 
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
-      { name, description, price, stock, image, categoryId, isAvailable },
+      { 
+        name, 
+        description, 
+        price, 
+        image, 
+        categoryId, 
+        isAvailable,
+        isUnlimited: isUnlimited || false,
+        ...(rawMaterialId ? { rawMaterialId } : { $unset: { rawMaterialId: 1 } })
+      },
       { new: true, runValidators: true }
     ).populate('categoryId', 'name');
-
-    // Catat log jika ada perubahan stok
-    if (stock > oldProduct.stock) {
-      const diff = stock - oldProduct.stock;
-      await ActivityLog.create({
-        title: 'Stok Ditambahkan',
-        message: `Owner menambahkan stok ${name} sebanyak ${diff} porsi. Total: ${stock}`,
-        type: 'success',
-        targetRole: 'staff'
-      });
-    } else if (stock < oldProduct.stock) {
-      const diff = oldProduct.stock - stock;
-      await ActivityLog.create({
-        title: 'Stok Dikurangi',
-        message: `Owner mengurangi stok ${name} sebanyak ${diff} porsi. Total: ${stock}`,
-        type: 'warning',
-        targetRole: 'staff'
-      });
-    }
 
     const pObj = updatedProduct!.toObject();
     const formattedProduct = {

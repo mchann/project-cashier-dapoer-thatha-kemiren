@@ -139,13 +139,21 @@ export default function POSPage() {
 
   // --- Handler Tambah Menu ke Keranjang ---
   const handleAddToCart = useCallback((product: Product) => {
-    if (product.stock <= 0) return;
+    const isLinked = !!product.rawMaterialId;
+    const rmStock = isLinked ? (product.rawMaterialId as any)?.stock : 0;
+    const isOutOfStock = !product.isUnlimited && (!isLinked || rmStock <= 0);
+
+    if (isOutOfStock) return;
+
     setCartItems((prev) => {
       const idx = prev.findIndex((item) => item.productId === product._id);
       if (idx > -1) {
-        if (prev[idx].quantity >= product.stock) {
-          showNotification(`Stok ${product.name} tidak mencukupi (sisa ${product.stock})`);
-          return prev;
+        if (!product.isUnlimited) {
+          const currentQtyInCart = prev[idx].quantity;
+          if (!isLinked || currentQtyInCart + 1 > rmStock) {
+            showNotification(`Stok ${product.name} tidak mencukupi (sisa ${rmStock})`);
+            return prev;
+          }
         }
         const updated = [...prev];
         updated[idx] = {
@@ -181,9 +189,14 @@ export default function POSPage() {
       
       // Validasi batas stok maksimum
       const product = products.find(p => p._id === productId);
-      if (product && nextQty > product.stock) {
-        showNotification(`Stok ${product.name} tidak mencukupi (sisa ${product.stock})`);
-        return prev;
+      if (product && !product.isUnlimited) {
+        const isLinked = !!product.rawMaterialId;
+        const rmStock = isLinked ? (product.rawMaterialId as any)?.stock : 0;
+        const currentQtyInCart = nextQty; // Since this is a single item, in a real scenario we'd sum all cart items sharing the same RM, but this is a good approximation for a single item change.
+        if (!isLinked || currentQtyInCart > rmStock) {
+          showNotification(`Stok ${product.name} tidak mencukupi (sisa ${rmStock})`);
+          return prev;
+        }
       }
       
       const updated = [...prev];

@@ -8,8 +8,6 @@ interface ProductTableProps {
   products: Product[];
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string, productName: string) => void;
-  onAdjustStock: (productId: string, delta: number) => void;
-  onSetStock?: (productId: string, newStock: number) => void;
   onToggleAvailable: (productId: string, currentStatus: boolean) => void;
 }
 
@@ -17,8 +15,6 @@ export function ProductTable({
   products,
   onEditProduct,
   onDeleteProduct,
-  onAdjustStock,
-  onSetStock,
   onToggleAvailable,
 }: ProductTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,15 +56,19 @@ export function ProductTable({
               <th className="p-4 rounded-tl-2xl w-12 text-center">No</th>
               <th className="p-4">Info Menu</th>
               <th className="p-4 text-right">Harga Jual</th>
-              <th className="p-4 text-center">Stok (Porsi)</th>
+              <th className="p-4 text-center">Stok</th>
               <th className="p-4 text-center">Status Jual</th>
               <th className="p-4 text-center rounded-tr-2xl">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#DCC7AA] bg-[#FFFDF7]">
             {paginatedProducts.map((p, index) => {
-              const isOutOfStock = p.stock <= 0;
               const isOffline = !p.isAvailable;
+              const isLinked = !!p.rawMaterialId;
+              const rmName = isLinked ? (p.rawMaterialId as any)?.name : null;
+              const rmStock = isLinked ? (p.rawMaterialId as any)?.stock : null;
+              const rmUnit = isLinked ? (p.rawMaterialId as any)?.unit : null;
+              const isOutOfStock = !p.isUnlimited && (!isLinked || rmStock <= 0);
 
               return (
                 <tr
@@ -126,51 +126,28 @@ export function ProductTable({
                     </div>
                   </td>
 
-                  {/* Kolom 3: Stok Cepat */}
-                  <td className="p-4 align-top pt-4">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onAdjustStock(p._id, -1)}
-                        disabled={p.stock <= 0}
-                        className="w-8 h-8 rounded-full flex items-center justify-center bg-[#FFFDF7] border border-[#DCC7AA] text-[#6F4E37] hover:border-[#ef4444] hover:text-[#ef4444] disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
-                        aria-label={`Kurangi stok ${p.name}`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" /></svg>
-                      </button>
-
-                      <div className="w-12 text-center">
-                        <input
-                          type="number"
-                          key={p._id + '-' + p.stock}
-                          defaultValue={p.stock}
-                          min="0"
-                          onBlur={(e) => {
-                            const val = parseInt(e.target.value, 10);
-                            if (!isNaN(val) && val !== p.stock && onSetStock) {
-                              onSetStock(p._id, val);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') e.currentTarget.blur();
-                          }}
-                          className={`w-full text-center bg-transparent border-none outline-none text-lg font-black p-0 m-0 focus:ring-0 focus:bg-[#DCC7AA]/20 rounded transition-colors ${
-                            isOutOfStock ? 'text-[#ef4444]' : 'text-[#4B3832]'
-                          }`}
-                        />
-                        <span className="block text-[9px] font-bold text-[#DCC7AA] -mt-1 uppercase tracking-wider">
-                          Porsi
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => onAdjustStock(p._id, 1)}
-                        className="w-8 h-8 rounded-full flex items-center justify-center bg-[#FFFDF7] border border-[#DCC7AA] text-[#6F4E37] hover:border-[#10b981] hover:text-[#10b981] transition-all shadow-sm"
-                        aria-label={`Tambah stok ${p.name}`}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                      </button>
+                  {/* Kolom 3: Info Stok */}
+                  <td className="p-4 align-top pt-5">
+                    <div className="flex flex-col items-center justify-center">
+                      {p.isUnlimited ? (
+                        <div className="bg-[#4B3832]/5 text-[#4B3832] px-3 py-1.5 rounded-xl font-black text-xs tracking-wider uppercase border border-[#DCC7AA]/30 shadow-sm flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                          Unlimited
+                        </div>
+                      ) : isLinked ? (
+                        <div className="flex flex-col items-center">
+                          <span className={`text-xl font-black tracking-tight ${rmStock <= 5 ? 'text-red-500 animate-pulse' : 'text-[#4B3832]'}`}>
+                            {rmStock} <span className="text-[10px] uppercase font-bold text-[#6F4E37]">{rmUnit}</span>
+                          </span>
+                          <span className="text-[10px] font-bold text-[#6F4E37] bg-[#F5E6CA] px-2 py-0.5 rounded border border-[#DCC7AA] mt-1 line-clamp-1 max-w-[80px]">
+                            {rmName}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-[10px] font-bold text-red-500 uppercase tracking-wider bg-red-50 px-2 py-1 rounded border border-red-200 text-center">
+                          Belum<br/>Ditautkan
+                        </div>
+                      )}
                     </div>
                   </td>
 

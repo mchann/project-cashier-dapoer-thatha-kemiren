@@ -15,7 +15,7 @@ interface ProductModalProps {
     name: string;
     description?: string;
     price: number;
-    stock: number;
+    isUnlimited: boolean;
     image?: string;
     categoryId: string;
     isAvailable: boolean;
@@ -61,8 +61,8 @@ function ProductForm({
   const [price, setPrice] = useState<number | ''>(
     initialData?.price ?? ''
   );
-  const [stock, setStock] = useState<number | ''>(
-    initialData?.stock ?? 10
+  const [isUnlimited, setIsUnlimited] = useState<boolean>(
+    initialData?.isUnlimited ?? false
   );
   const [description, setDescription] = useState(
     initialData?.description || ''
@@ -136,20 +136,16 @@ function ProductForm({
       setErrorMsg('Harga menu harus diisi dengan benar (≥ Rp 0).');
       return;
     }
-    if (stock === '' || stock < 0) {
-      setErrorMsg('Stok porsi matang tidak boleh negatif.');
-      return;
-    }
 
     onSave({
       _id: initialData?._id,
       name: name.trim(),
       description: description.trim(),
       price: Number(price),
-      stock: Number(stock),
+      isUnlimited,
       image: image.trim(),
       categoryId,
-      isAvailable: Number(stock) > 0 ? isAvailable : false,
+      isAvailable,
     });
   };
 
@@ -290,19 +286,25 @@ function ProductForm({
             </div>
 
             {/* Stok */}
-            <div>
-              <label htmlFor="prod-stock" className="block text-sm font-medium text-[#6F4E37] mb-2">
-                Stok Awal
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-extrabold text-[#6F4E37] mb-2 uppercase tracking-wide">
+                Tipe Stok
               </label>
-              <input
-                id="prod-stock"
-                type="number"
-                min={0}
-                value={stock}
-                onChange={(e) => setStock(e.target.value === '' ? '' : Number(e.target.value))}
-                placeholder="0"
-                className="w-full bg-transparent border border-[#DCC7AA] rounded-2xl px-4 py-3 text-sm font-semibold text-[#4B3832] focus:border-[#6F4E37] focus:ring-1 focus:ring-[#6F4E37] outline-none transition-all placeholder:text-[#DCC7AA]"
-              />
+              <div className="mt-4 flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isUnlimited"
+                  checked={isUnlimited}
+                  onChange={(e) => setIsUnlimited(e.target.checked)}
+                  className="w-5 h-5 accent-[#4B3832] rounded cursor-pointer"
+                />
+                <label htmlFor="isUnlimited" className="text-[#4B3832] font-bold cursor-pointer">
+                  Tanpa Stok (Unlimited)
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 font-medium mt-2">
+                Centang jika menu ini stoknya tidak terbatas (misal: Es Teh). Jika tidak dicentang, pastikan tautkan ke Bahan Baku di halaman Kelola Stok.
+              </p>
             </div>
           </div>
 

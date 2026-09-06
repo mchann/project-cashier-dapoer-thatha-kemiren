@@ -9,6 +9,7 @@ export async function GET() {
     await connectMongo();
     const products = await Product.find({})
       .populate('categoryId', 'name')
+      .populate('rawMaterialId', 'name stock unit')
       .sort({ createdAt: -1 });
     
     const formattedProducts = products.map(p => {
@@ -33,11 +34,11 @@ export async function POST(req: Request) {
   try {
     await connectMongo();
     const body = await req.json();
-    const { name, description, price, stock, image, categoryId, isAvailable } = body;
+    const { name, description, price, image, categoryId, isAvailable, isUnlimited, rawMaterialId } = body;
 
-    if (!name || price === undefined || stock === undefined || !categoryId) {
+    if (!name || price === undefined || !categoryId) {
       return NextResponse.json(
-        { error: 'Nama, harga, stok, dan kategori wajib diisi' },
+        { error: 'Nama, harga, dan kategori wajib diisi' },
         { status: 400 }
       );
     }
@@ -46,14 +47,17 @@ export async function POST(req: Request) {
       name,
       description,
       price,
-      stock,
       image,
       categoryId,
       isAvailable,
+      isUnlimited: isUnlimited || false,
+      ...(rawMaterialId ? { rawMaterialId } : {})
     });
     
     // Populate the newly created product to return complete data
-    const populatedProduct = await Product.findById(newProduct._id).populate('categoryId', 'name');
+    const populatedProduct = await Product.findById(newProduct._id)
+      .populate('categoryId', 'name')
+      .populate('rawMaterialId', 'name stock unit');
     
     if (populatedProduct) {
       const pObj = populatedProduct.toObject();
@@ -67,8 +71,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json(populatedProduct, { status: 201 });
   } catch (error) {
+    console.error("Error creating product:", error);
     return NextResponse.json(
-      { error: 'Gagal membuat menu' },
+      { error: 'Gagal membuat menu: ' + (error as any).message },
       { status: 500 }
     );
   }
