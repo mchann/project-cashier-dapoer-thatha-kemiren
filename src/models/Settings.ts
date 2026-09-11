@@ -20,6 +20,10 @@ export interface ISettings extends Document {
   pos: {
     cancellationPin: string;
   };
+  expenses: {
+    categories: string[];
+    units: string[];
+  };
 }
 
 const settingsSchema = new Schema<ISettings>(
@@ -43,6 +47,16 @@ const settingsSchema = new Schema<ISettings>(
     pos: {
       cancellationPin: { type: String, default: '1234' },
     },
+    expenses: {
+      categories: { 
+        type: [String], 
+        default: ['Bahan Baku', 'Operasional', 'Gaji', 'Lainnya'] 
+      },
+      units: { 
+        type: [String], 
+        default: ['Kilogram (KG)', 'Gram (gr)', 'Liter (L)', 'Mililiter (ml)', 'Pcs / Buah', 'Ikat', 'Pack', 'Kardus / Dus'] 
+      }
+    }
   },
   { timestamps: true, strict: false }
 );

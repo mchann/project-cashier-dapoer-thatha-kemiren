@@ -5,11 +5,12 @@ import { Product } from '@/models/Product';
 import { RawMaterial } from '@/models/RawMaterial';
 import { GuideVoucher } from '@/models/GuideVoucher';
 import ActivityLog from '@/models/ActivityLog';
+import { Expense } from '@/models/Expense';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import mongoose from 'mongoose';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await connectMongo();
     
@@ -22,6 +23,14 @@ export async function GET() {
     // Mengambil semua transaksi lunas, diurutkan dari terbaru
     const query: any = { paymentStatus: { $in: ['paid', 'void'] } };
     
+    // Check if filtering by pending guide rewards
+    const { searchParams } = new URL(req.url || '', 'http://localhost');
+    if (searchParams.get('guidePending') === 'true') {
+      query.isGuideOrder = true;
+      query.isGuideRewardProcessed = false;
+      query.paymentStatus = 'paid';
+    }
+
     // Jika bukan superadmin, hanya tampilkan transaksi miliknya sendiri
     if (session.user.role !== 'superadmin') {
       query.cashierId = session.user.id;
@@ -63,6 +72,8 @@ export async function POST(req: Request) {
       guideCommission,
       guideCode,
       guideName,
+      isGuideOrder,
+      isGuideRewardProcessed,
       grandTotal,
       amountReceived,
       changeAmount,
@@ -114,7 +125,8 @@ export async function POST(req: Request) {
 
     // 3. Cek apakah stok bahan baku cukup
     const rmIdsToUpdate = Object.keys(rawMaterialRequests);
-    let rawMaterialsInDb = [];
+    const stockLogs: any[] = [];
+    let rawMaterialsInDb: any[] = [];
     
     if (rmIdsToUpdate.length > 0) {
       rawMaterialsInDb = await RawMaterial.find({ _id: { $in: rmIdsToUpdate } });
@@ -141,7 +153,6 @@ export async function POST(req: Request) {
       }));
 
       // Cek stok habis untuk dilog
-      const stockLogs: any[] = [];
       for (const rmId of rmIdsToUpdate) {
         const rm = rawMaterialsInDb.find(r => r._id.toString() === rmId);
         if (rm && (rm.stock - rawMaterialRequests[rmId] <= 0)) {
@@ -183,6 +194,8 @@ export async function POST(req: Request) {
       guideCommission: guideCommission || 0,
       guideCode: guideCode || '',
       guideName: guideName || '',
+      isGuideOrder: isGuideOrder || false,
+      isGuideRewardProcessed: isGuideRewardProcessed || false,
       grandTotal,
       amountReceived,
       changeAmount,
@@ -203,7 +216,18 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5. Catat ke ActivityLog
+    // 6. Jika ada Cashback (guideCommission) dan status paid, catat ke Pengeluaran (Expense)
+    if (paymentStatus === 'paid' && guideCommission > 0) {
+      await Expense.create({
+        title: `Pencairan Cashback Guide: ${guideName || 'Guide'}`,
+        amount: guideCommission,
+        category: 'operasional',
+        notes: `Transaksi: ${invoiceNumber} (Voucher: ${guideCode})`,
+        date: new Date()
+      });
+    }
+
+    // 7. Catat ke ActivityLog
     const logsToCreate = [...stockLogs];
     
     // Log Transaksi

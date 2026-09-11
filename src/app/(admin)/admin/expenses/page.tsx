@@ -2,6 +2,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface Expense {
   _id: string;
@@ -18,12 +21,19 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
+  // Settings State
+  const [categories, setCategories] = useState<string[]>(['Bahan Baku', 'Operasional', 'Gaji', 'Lainnya']);
+  const [units, setUnits] = useState<string[]>(['Kilogram (KG)', 'Gram (gr)', 'Liter (L)', 'Mililiter (ml)', 'Pcs / Buah', 'Ikat', 'Pack', 'Kardus / Dus']);
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Settings Modal State
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // Filter & Pagination
   const [viewMode, setViewMode] = useState<'today' | 'month' | 'range' | 'all'>('today');
@@ -38,18 +48,34 @@ export default function ExpensesPage() {
     title: '',
     amount: '',
     quantity: '1',
-    unit: 'KG',
-    category: 'bahan_baku',
+    unit: 'Kilogram (KG)',
+    category: 'Bahan Baku',
     date: new Date().toISOString().split('T')[0],
     notes: ''
   });
 
-  const fetchExpenses = async () => {
+  const fetchData = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/admin/expenses');
-      const data = await res.json();
-      if(Array.isArray(data)) setExpenses(data);
+      const [resExpenses, resSettings] = await Promise.all([
+        fetch('/api/admin/expenses'),
+        fetch('/api/settings')
+      ]);
+      
+      if (resExpenses.ok) {
+        const data = await resExpenses.json();
+        if(Array.isArray(data)) setExpenses(data);
+      }
+      
+      if (resSettings.ok) {
+        const settingsData = await resSettings.json();
+        if (settingsData?.expenses?.categories?.length) {
+          setCategories(settingsData.expenses.categories);
+        }
+        if (settingsData?.expenses?.units?.length) {
+          setUnits(settingsData.expenses.units);
+        }
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -58,7 +84,7 @@ export default function ExpensesPage() {
   };
 
   useEffect(() => {
-    fetchExpenses();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -66,13 +92,14 @@ export default function ExpensesPage() {
       if (e.key === 'Escape') {
         setIsModalOpen(false);
         setIsDeleteModalOpen(false);
+        setIsSettingsModalOpen(false);
       }
     };
-    if (isModalOpen || isDeleteModalOpen) {
+    if (isModalOpen || isDeleteModalOpen || isSettingsModalOpen) {
       window.addEventListener('keydown', handleKeyDown);
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isModalOpen, isDeleteModalOpen]);
+  }, [isModalOpen, isDeleteModalOpen, isSettingsModalOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,8 +122,8 @@ export default function ExpensesPage() {
       if (res.ok) {
         setIsModalOpen(false);
         setEditingId(null);
-        setFormData({ title: '', amount: '', quantity: '1', unit: 'KG', category: 'bahan_baku', date: new Date().toISOString().split('T')[0], notes: '' });
-        fetchExpenses();
+        setFormData({ title: '', amount: '', quantity: '1', unit: units[0] || 'KG', category: categories[0] || 'Bahan Baku', date: new Date().toISOString().split('T')[0], notes: '' });
+        fetchData();
       } else {
         alert('Gagal menyimpan pengeluaran');
       }
@@ -113,8 +140,8 @@ export default function ExpensesPage() {
       title: exp.title,
       amount: exp.amount.toString(),
       quantity: exp.quantity ? exp.quantity.toString() : '1',
-      unit: exp.unit || 'KG',
-      category: exp.category,
+      unit: exp.unit || units[0] || 'KG',
+      category: exp.category || categories[0] || 'Bahan Baku',
       date: new Date(exp.date).toISOString().split('T')[0],
       notes: exp.notes || ''
     });
@@ -135,7 +162,7 @@ export default function ExpensesPage() {
       if (res.ok) {
         setIsDeleteModalOpen(false);
         setExpenseToDelete(null);
-        fetchExpenses();
+        fetchData();
       }
     } catch (error) {
       console.error(error);
@@ -172,7 +199,7 @@ export default function ExpensesPage() {
 
       return matchCategory && matchDate && matchSearch;
     });
-  }, [expenses, categoryFilter, dateFilter, viewMode, searchQuery]);
+  }, [expenses, categoryFilter, startDate, endDate, viewMode, searchQuery]);
 
   // Reset page when filter changes
   useEffect(() => {
@@ -191,6 +218,47 @@ export default function ExpensesPage() {
     return filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
   }, [filteredExpenses]);
 
+  const exportToExcel = () => {
+    const data = filteredExpenses.map((exp, index) => ({
+      No: index + 1,
+      Tanggal: new Date(exp.date).toLocaleDateString('id-ID'),
+      Kategori: exp.category,
+      Judul: exp.title,
+      'Nominal (Rp)': exp.amount,
+      Kuantitas: exp.quantity ? `${exp.quantity} ${exp.unit || ''}` : '-',
+      Catatan: exp.notes || '-'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Pengeluaran");
+    XLSX.writeFile(workbook, `Laporan_Pengeluaran_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.text("Laporan Pengeluaran Dapoer Thatha", 14, 15);
+    
+    const tableColumn = ["No", "Tanggal", "Kategori", "Judul", "Nominal", "Kuantitas", "Catatan"];
+    const tableRows = filteredExpenses.map((exp, index) => [
+      index + 1,
+      new Date(exp.date).toLocaleDateString('id-ID'),
+      exp.category,
+      exp.title,
+      `Rp ${exp.amount.toLocaleString('id-ID')}`,
+      exp.quantity ? `${exp.quantity} ${exp.unit || ''}` : '-',
+      exp.notes || '-'
+    ]);
+
+    (doc as any).autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+    });
+    
+    doc.save(`Laporan_Pengeluaran_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="p-6 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
@@ -198,18 +266,27 @@ export default function ExpensesPage() {
           <h1 className="text-3xl font-black tracking-tight text-[#4B3832]">Daftar Pengeluaran</h1>
           <p className="text-[#6F4E37] font-medium">Pantau total uang keluar dan operasional restoran.</p>
         </div>
-        
-        <button 
-          onClick={() => {
-            setEditingId(null);
-            setFormData({ title: '', amount: '', quantity: '1', unit: 'KG', category: 'bahan_baku', date: new Date().toISOString().split('T')[0], notes: '' });
-            setIsModalOpen(true);
-          }}
-          className="bg-[#4B3832] text-white px-6 py-3 rounded-xl font-bold tracking-wide hover:bg-[#6F4E37] transition-colors shadow-md flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-          Catat Pengeluaran
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <button onClick={exportToPDF} className="bg-red-50 text-red-600 border border-red-200 px-4 py-3 rounded-xl font-bold hover:bg-red-100 transition-colors shadow-sm flex items-center justify-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            PDF
+          </button>
+          <button onClick={exportToExcel} className="bg-green-50 text-green-600 border border-green-200 px-4 py-3 rounded-xl font-bold hover:bg-green-100 transition-colors shadow-sm flex items-center justify-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Excel
+          </button>
+          <button 
+            onClick={() => {
+              setEditingId(null);
+              setFormData({ title: '', amount: '', quantity: '1', unit: 'KG', category: 'bahan_baku', date: new Date().toISOString().split('T')[0], notes: '' });
+              setIsModalOpen(true);
+            }}
+            className="bg-[#4B3832] text-white px-6 py-3 rounded-xl font-bold tracking-wide hover:bg-[#6F4E37] transition-colors shadow-md flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+            Catat Pengeluaran
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -279,13 +356,19 @@ export default function ExpensesPage() {
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             {/* Filter Tabs Category */}
             <div className="flex gap-2 bg-[#FFFDF7] p-1.5 rounded-2xl border border-[#DCC7AA] shadow-sm overflow-x-auto w-full md:w-auto">
-              {['semua', 'bahan_baku', 'operasional', 'gaji', 'lainnya'].map((cat) => (
+              <button
+                onClick={() => setCategoryFilter('semua')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all ${categoryFilter === 'semua' ? 'bg-[#4B3832] text-white shadow-md' : 'text-[#6F4E37] hover:bg-[#F5E6CA]'}`}
+              >
+                Semua
+              </button>
+              {categories.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setCategoryFilter(cat)}
                   className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all ${categoryFilter === cat ? 'bg-[#4B3832] text-white shadow-md' : 'text-[#6F4E37] hover:bg-[#F5E6CA]'}`}
                 >
-                  {cat.replace('_', ' ')}
+                  {cat}
                 </button>
               ))}
             </div>
@@ -439,14 +522,9 @@ export default function ExpensesPage() {
                     onChange={(e) => setFormData({...formData, unit: e.target.value})}
                     className="w-1/2 border rounded-xl px-4 py-3 outline-none focus:border-[#DCC7AA] bg-[#FFFDF7]"
                   >
-                    <option value="KG">Kilogram (KG)</option>
-                    <option value="Gram">Gram (gr)</option>
-                    <option value="Liter">Liter (L)</option>
-                    <option value="ML">Mililiter (ml)</option>
-                    <option value="Pcs">Pcs / Buah</option>
-                    <option value="Ikat">Ikat</option>
-                    <option value="Pack">Pack</option>
-                    <option value="Dus">Kardus / Dus</option>
+                    {units.map(u => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -465,15 +543,18 @@ export default function ExpensesPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-2 opacity-80">Kategori</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider opacity-80">Kategori</label>
+                  <button type="button" onClick={() => setIsSettingsModalOpen(true)} className="text-[10px] bg-[#F5E6CA] text-[#6F4E37] px-2 py-1 rounded-md font-bold hover:bg-[#DCC7AA] transition-colors">+ Atur Kategori/Satuan</button>
+                </div>
                 <select 
                   value={formData.category}
                   onChange={(e) => setFormData({...formData, category: e.target.value})}
                   className="w-full border rounded-xl px-4 py-3 outline-none focus:border-[#DCC7AA] bg-[#FFFDF7]"
                 >
-                  <option value="bahan_baku">Bahan Baku (Pasar)</option>
-                  <option value="operasional">Operasional (Listrik, Gas)</option>
-                  <option value="lainnya">Lainnya</option>
+                  {categories.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -538,6 +619,97 @@ export default function ExpensesPage() {
                 >
                   Ya, Hapus
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Settings Modal */}
+      {isSettingsModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setIsSettingsModalOpen(false)}
+        >
+          <div 
+            className="bg-[#FFFDF7] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-[#DCC7AA]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-[#DCC7AA] bg-white flex justify-between items-center">
+              <h2 className="text-xl font-black text-[#4B3832]">Kategori & Satuan</h2>
+              <button onClick={() => setIsSettingsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">&times;</button>
+            </div>
+            
+            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-8 bg-white">
+              {/* Kategori */}
+              <div>
+                <h3 className="font-bold text-[#4B3832] mb-3">Daftar Kategori</h3>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {categories.map((cat, i) => (
+                    <div key={i} className="flex items-center gap-1 bg-[#F5E6CA] text-[#6F4E37] px-3 py-1.5 rounded-lg text-sm font-bold">
+                      {cat}
+                      <button 
+                        onClick={async () => {
+                          const newCats = categories.filter((_, idx) => idx !== i);
+                          setCategories(newCats);
+                          await fetch('/api/settings', { method: 'PUT', body: JSON.stringify({ expenses: { categories: newCats, units } }) });
+                          fetchData();
+                        }}
+                        className="ml-1 text-[#6F4E37]/50 hover:text-red-500"
+                      >&times;</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input type="text" id="newCategory" placeholder="Kategori Baru..." className="flex-1 border border-[#DCC7AA] rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-[#4B3832]" />
+                  <button 
+                    onClick={async () => {
+                      const input = document.getElementById('newCategory') as HTMLInputElement;
+                      if (!input.value.trim()) return;
+                      const newCats = [...categories, input.value.trim()];
+                      setCategories(newCats);
+                      await fetch('/api/settings', { method: 'PUT', body: JSON.stringify({ expenses: { categories: newCats, units } }) });
+                      input.value = '';
+                      fetchData();
+                    }}
+                    className="bg-[#4B3832] text-white px-4 py-2 rounded-xl text-sm font-bold"
+                  >Tambah</button>
+                </div>
+              </div>
+
+              {/* Satuan */}
+              <div>
+                <h3 className="font-bold text-[#4B3832] mb-3">Daftar Satuan Kuantitas</h3>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {units.map((u, i) => (
+                    <div key={i} className="flex items-center gap-1 bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-bold">
+                      {u}
+                      <button 
+                        onClick={async () => {
+                          const newUnits = units.filter((_, idx) => idx !== i);
+                          setUnits(newUnits);
+                          await fetch('/api/settings', { method: 'PUT', body: JSON.stringify({ expenses: { categories, units: newUnits } }) });
+                          fetchData();
+                        }}
+                        className="ml-1 text-gray-400 hover:text-red-500"
+                      >&times;</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input type="text" id="newUnit" placeholder="Satuan Baru..." className="flex-1 border border-[#DCC7AA] rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-[#4B3832]" />
+                  <button 
+                    onClick={async () => {
+                      const input = document.getElementById('newUnit') as HTMLInputElement;
+                      if (!input.value.trim()) return;
+                      const newUnits = [...units, input.value.trim()];
+                      setUnits(newUnits);
+                      await fetch('/api/settings', { method: 'PUT', body: JSON.stringify({ expenses: { categories, units: newUnits } }) });
+                      input.value = '';
+                      fetchData();
+                    }}
+                    className="bg-[#4B3832] text-white px-4 py-2 rounded-xl text-sm font-bold"
+                  >Tambah</button>
+                </div>
               </div>
             </div>
           </div>

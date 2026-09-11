@@ -30,6 +30,7 @@ export interface OrderItem {
   quantity: number;
   savedQuantity?: number;
   notes?: string;
+  isFree?: boolean;
 }
 
 export type OrderType = 'dine_in' | 'takeaway' | 'reservation' | 'qr_order';

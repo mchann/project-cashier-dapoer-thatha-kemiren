@@ -35,6 +35,7 @@ export async function PUT(req: Request) {
       if (body.reservation) updateData.reservation = { ...settings.reservation, ...body.reservation };
       if (body.landingPage) updateData.landingPage = { ...settings.landingPage, ...body.landingPage };
       if (body.pos) updateData.pos = { ...settings.pos, ...body.pos };
+      if (body.expenses) updateData.expenses = { ...settings.expenses, ...body.expenses };
 
       settings = await Settings.findOneAndUpdate({}, { $set: updateData }, { new: true, strict: false });
     }

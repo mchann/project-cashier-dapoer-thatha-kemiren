@@ -20,8 +20,7 @@ const expenseSchema = new Schema<IExpense>(
     quantity: { type: Number, default: 1 },
     unit: { type: String, default: 'pcs' },
     category: { 
-      type: String, 
-      enum: ['bahan_baku', 'operasional', 'lainnya'],
+      type: String,
       default: 'operasional'
     },
     notes: { type: String, default: '' },

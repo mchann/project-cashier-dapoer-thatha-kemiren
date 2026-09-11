@@ -57,7 +57,7 @@ export default function ActivityLogsPage() {
   });
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto h-full flex flex-col">
+    <div className="p-4 md:px-8 md:py-6 space-y-6 h-full flex flex-col">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
         <div>

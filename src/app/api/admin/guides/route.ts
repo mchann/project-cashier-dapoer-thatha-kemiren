@@ -37,9 +37,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { guideName, rewardType, amountType, amount } = await req.json();
+    const { guideName, sourceTransactionId, rewards } = await req.json();
 
-    if (!guideName || !rewardType || !amountType || !amount) {
+    if (!guideName || !rewards) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -56,11 +56,17 @@ export async function POST(req: Request) {
     const newVoucher = await GuideVoucher.create({
       code,
       guideName,
-      rewardType,
-      amountType,
-      amount,
+      sourceTransactionId,
+      rewards,
       status: 'active'
     });
+
+    if (sourceTransactionId) {
+      const Transaction = (await import('@/models/Transaction')).default;
+      await Transaction.findByIdAndUpdate(sourceTransactionId, {
+        isGuideRewardProcessed: true
+      });
+    }
 
     return NextResponse.json(newVoucher, { status: 201 });
   } catch (error) {

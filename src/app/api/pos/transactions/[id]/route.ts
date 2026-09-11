@@ -3,6 +3,7 @@ import connectMongo from '@/lib/mongodb';
 import Transaction from '@/models/Transaction';
 import { Product } from '@/models/Product';
 import ActivityLog from '@/models/ActivityLog';
+import { Expense } from '@/models/Expense';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
@@ -23,6 +24,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const transaction = await Transaction.findById(transactionId);
     if (!transaction) {
       return NextResponse.json({ error: 'Transaksi tidak ditemukan' }, { status: 404 });
+    }
+
+    // Cek apakah transisi ke paid dan ada komisi guide
+    if (paymentStatus === 'paid' && transaction.paymentStatus !== 'paid' && (transaction.guideCommission || 0) > 0) {
+      await Expense.create({
+        title: `Pencairan Cashback Guide: ${transaction.guideName || 'Guide'}`,
+        amount: transaction.guideCommission,
+        category: 'operasional',
+        notes: `Transaksi: ${transaction.invoiceNumber} (Voucher: ${transaction.guideCode || '-'})`,
+        date: new Date()
+      });
     }
 
     // Update status bayar
@@ -132,8 +144,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     if (voidedDiff.length > 0) {
-      if (!transaction.voidedItems) transaction.voidedItems = [];
-      transaction.voidedItems.push(...voidedDiff);
+      if (!(transaction as any).voidedItems) (transaction as any).voidedItems = [];
+      (transaction as any).voidedItems.push(...voidedDiff);
 
       const itemsStr = voidedDiff.map(i => `${i.quantity}x ${i.name}`).join(', ');
       await ActivityLog.create({
@@ -149,6 +161,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     transaction.dpAmount = body.dpAmount;
     transaction.guideCommission = body.guideCommission;
     transaction.grandTotal = body.grandTotal;
+    
+    if (body.guideName !== undefined) transaction.guideName = body.guideName;
+    if (body.isGuideOrder !== undefined) transaction.isGuideOrder = body.isGuideOrder;
+    if (body.isGuideRewardProcessed !== undefined) transaction.isGuideRewardProcessed = body.isGuideRewardProcessed;
     
     // Jika ganti meja atau order type
     if (body.tableNumber) transaction.tableNumber = body.tableNumber;

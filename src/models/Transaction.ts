@@ -22,6 +22,8 @@ export interface ITransaction extends Document {
   guideCommission: number;
   guideCode?: string;
   guideName?: string;
+  isGuideOrder?: boolean;
+  isGuideRewardProcessed?: boolean;
   grandTotal: number;
   amountReceived: number;
   changeAmount: number;
@@ -69,6 +71,8 @@ const TransactionSchema = new Schema<ITransaction>(
     guideCommission: { type: Number, default: 0 },
     guideCode: { type: String, default: '' },
     guideName: { type: String, default: '' },
+    isGuideOrder: { type: Boolean, default: false },
+    isGuideRewardProcessed: { type: Boolean, default: false },
     grandTotal: { type: Number, required: true },
     amountReceived: { type: Number, required: true },
     changeAmount: { type: Number, required: true },

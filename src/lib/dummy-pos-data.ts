@@ -20,6 +20,7 @@ export const DUMMY_PRODUCTS: Product[] = [
     categoryId: 'cat-1',
     category: { _id: 'cat-1', name: 'Makanan Utama' },
     isAvailable: true,
+    isUnlimited: false,
   },
   {
     _id: 'prod-102',
@@ -31,6 +32,7 @@ export const DUMMY_PRODUCTS: Product[] = [
     categoryId: 'cat-1',
     category: { _id: 'cat-1', name: 'Makanan Utama' },
     isAvailable: true,
+    isUnlimited: false,
   },
   {
     _id: 'prod-103',
@@ -42,6 +44,7 @@ export const DUMMY_PRODUCTS: Product[] = [
     categoryId: 'cat-1',
     category: { _id: 'cat-1', name: 'Makanan Utama' },
     isAvailable: true,
+    isUnlimited: false,
   },
   {
     _id: 'prod-104',
@@ -53,6 +56,7 @@ export const DUMMY_PRODUCTS: Product[] = [
     categoryId: 'cat-1',
     category: { _id: 'cat-1', name: 'Makanan Utama' },
     isAvailable: true,
+    isUnlimited: false,
   },
   {
     _id: 'prod-201',
@@ -64,6 +68,7 @@ export const DUMMY_PRODUCTS: Product[] = [
     categoryId: 'cat-2',
     category: { _id: 'cat-2', name: 'Lauk & Sambal' },
     isAvailable: true,
+    isUnlimited: false,
   },
   {
     _id: 'prod-202',
@@ -75,6 +80,7 @@ export const DUMMY_PRODUCTS: Product[] = [
     categoryId: 'cat-2',
     category: { _id: 'cat-2', name: 'Lauk & Sambal' },
     isAvailable: true,
+    isUnlimited: false,
   },
   {
     _id: 'prod-301',
@@ -86,6 +92,7 @@ export const DUMMY_PRODUCTS: Product[] = [
     categoryId: 'cat-3',
     category: { _id: 'cat-3', name: 'Minuman Segar' },
     isAvailable: true,
+    isUnlimited: false,
   },
   {
     _id: 'prod-302',
@@ -97,6 +104,7 @@ export const DUMMY_PRODUCTS: Product[] = [
     categoryId: 'cat-3',
     category: { _id: 'cat-3', name: 'Minuman Segar' },
     isAvailable: true,
+    isUnlimited: false,
   },
   {
     _id: 'prod-303',
@@ -108,6 +116,7 @@ export const DUMMY_PRODUCTS: Product[] = [
     categoryId: 'cat-3',
     category: { _id: 'cat-3', name: 'Minuman Segar' },
     isAvailable: true,
+    isUnlimited: false,
   },
   {
     _id: 'prod-401',
@@ -119,6 +128,7 @@ export const DUMMY_PRODUCTS: Product[] = [
     categoryId: 'cat-4',
     category: { _id: 'cat-4', name: 'Cemilan Tradisional' },
     isAvailable: true,
+    isUnlimited: false,
   },
 ];
 

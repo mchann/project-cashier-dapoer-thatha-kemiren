@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { OrderItem } from '@/types/pos';
-import { TravelPartnerSelector, AppliedGuideVoucher } from './TravelPartnerSelector';
+import { TravelPartnerSelector, AppliedGuideVoucher, GuideInfo } from './TravelPartnerSelector';
 
 interface OrderCartProps {
   orderType: 'dine_in' | 'takeaway' | 'reservation';
@@ -12,6 +12,8 @@ interface OrderCartProps {
   items: OrderItem[];
   paymentMode: 'pay_now' | 'save_faktur';
   dpAmount: number;
+  guideInfo: GuideInfo;
+  onUpdateGuideInfo: (info: GuideInfo) => void;
   guideVoucher: AppliedGuideVoucher | null;
   onChangeOrderType: (type: 'dine_in' | 'takeaway' | 'reservation') => void;
   onUpdateTableNumber: (val: string) => void;
@@ -32,6 +34,8 @@ export function OrderCart({
   items,
   paymentMode,
   dpAmount,
+  guideInfo,
+  onUpdateGuideInfo,
   guideVoucher,
   onChangeOrderType,
   onUpdateTableNumber,
@@ -51,10 +55,11 @@ export function OrderCart({
   let guideCommission = 0;
   let discountAmount = 0;
   if (guideVoucher) {
-    if (guideVoucher.rewardType === 'cashback') {
-      guideCommission = guideVoucher.amountType === 'percentage' ? (subtotal * guideVoucher.amount / 100) : guideVoucher.amount;
-    } else {
-      discountAmount = guideVoucher.amountType === 'percentage' ? (subtotal * guideVoucher.amount / 100) : guideVoucher.amount;
+    if (guideVoucher.rewards?.cashbackAmount) {
+      guideCommission = guideVoucher.rewards.cashbackAmount;
+    }
+    if (guideVoucher.rewards?.discountPercentage) {
+      discountAmount = (subtotal * guideVoucher.rewards.discountPercentage) / 100;
     }
   }
   
@@ -193,7 +198,7 @@ export function OrderCart({
           <ul className="space-y-3 pb-4">
             {items.map((item) => (
               <li
-                key={item.productId}
+                key={`${item.productId}-${item.isFree ? 'free' : 'paid'}`}
                 className="bg-[#FFFDF7] border border-[#DCC7AA]/50 rounded-2xl p-3 flex flex-col gap-2 transition-colors shadow-sm"
               >
                 <div className="flex items-start justify-between">
@@ -211,26 +216,32 @@ export function OrderCart({
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[#6F4E37] bg-[#F5E6CA] px-2 py-0.5 rounded-md font-bold">Reguler</span>
+                  {item.isFree ? (
+                    <span className="text-[10px] text-white bg-emerald-500 px-2 py-0.5 rounded-md font-bold">Gratis Guide</span>
+                  ) : (
+                    <span className="text-[10px] text-[#6F4E37] bg-[#F5E6CA] px-2 py-0.5 rounded-md font-bold">Reguler</span>
+                  )}
                   
                   {/* Kontrol Kuantitas */}
-                  <div className="flex items-center gap-2 bg-[#F5E6CA]/50 border border-[#DCC7AA]/50 px-2 py-1 rounded-full">
+                  <div className={`flex items-center gap-2 px-2 py-1 rounded-full ${item.isFree ? 'opacity-50' : 'bg-[#F5E6CA]/50 border border-[#DCC7AA]/50'}`}>
                     <button
                       type="button"
-                      onClick={() => onUpdateQuantity(item.productId, -1)}
-                      className="text-[#4B3832] font-black w-4 flex justify-center"
+                      onClick={() => !item.isFree && onUpdateQuantity(item.productId, -1)}
+                      disabled={item.isFree}
+                      className="text-[#4B3832] font-black w-4 flex justify-center disabled:cursor-not-allowed"
                     >
-                      -
+                      {item.isFree ? '' : '-'}
                     </button>
                     <span className="w-3 text-center font-bold text-xs text-[#4B3832]">
                       {item.quantity}
                     </span>
                     <button
                       type="button"
-                      onClick={() => onUpdateQuantity(item.productId, 1)}
-                      className="text-[#4B3832] font-black w-4 flex justify-center"
+                      onClick={() => !item.isFree && onUpdateQuantity(item.productId, 1)}
+                      disabled={item.isFree}
+                      className="text-[#4B3832] font-black w-4 flex justify-center disabled:cursor-not-allowed"
                     >
-                      +
+                      {item.isFree ? '' : '+'}
                     </button>
                   </div>
                 </div>
@@ -351,6 +362,8 @@ export function OrderCart({
             </div>
             <div className="p-5">
               <TravelPartnerSelector
+                guideInfo={guideInfo}
+                onUpdateGuideInfo={onUpdateGuideInfo}
                 appliedVoucher={guideVoucher}
                 onApplyVoucher={onApplyVoucher}
                 onClose={() => setIsTravelModalOpen(false)}

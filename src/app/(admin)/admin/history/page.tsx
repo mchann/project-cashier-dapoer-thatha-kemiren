@@ -246,6 +246,9 @@ export default function AdminOrderHistoryPage() {
                                   {order.paymentStatus === 'void' && (
                                     <span className="bg-red-100 text-red-600 text-[10px] font-black px-2 py-0.5 rounded border border-red-200">VOID</span>
                                   )}
+                                  {order.isGuideOrder && (
+                                    <span className="bg-orange-100 text-orange-600 text-[10px] font-black px-2 py-0.5 rounded border border-orange-200">GUIDE</span>
+                                  )}
                                 </div>
                               </td>
                               <td className="px-5 py-4 whitespace-nowrap">{new Date(order.createdAt || '').toLocaleString('id-ID')}</td>

@@ -23,7 +23,14 @@ export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: DashboardIcon },
     { name: 'Laporan Keuangan', href: '/admin/reports', icon: ReportIcon },
-    { name: 'Pengeluaran', href: '/admin/expenses', icon: ExpenseIcon },
+    { 
+      name: 'Pengeluaran', 
+      icon: ExpenseIcon,
+      subItems: [
+        { name: 'Daftar Pengeluaran', href: '/admin/expenses' },
+        { name: 'Penggajian', href: '/admin/payroll' }
+      ]
+    },
     { 
       name: 'Riwayat', 
       icon: HistoryIcon,

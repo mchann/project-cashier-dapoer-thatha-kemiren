@@ -28,7 +28,7 @@ export default function POSPage() {
   const [isPulling, setIsPulling] = useState<boolean>(false);
 
   // --- State Keranjang Pesanan ---
-  const [orderType, setOrderType] = useState<'dine_in' | 'takeaway'>('dine_in');
+  const [orderType, setOrderType] = useState<'dine_in' | 'takeaway' | 'reservation'>('dine_in');
   const [tableNumber, setTableNumber] = useState<string>('');
   const [customerName, setCustomerName] = useState<string>('');
   const [cartItems, setCartItems] = useState<OrderItem[]>([]);
@@ -37,6 +37,7 @@ export default function POSPage() {
 
   // --- State Mitra Travel / Guide ---
   const [guideVoucher, setGuideVoucher] = useState<AppliedGuideVoucher | null>(null);
+  const [guideInfo, setGuideInfo] = useState({ isGuideOrder: false, guideName: '' });
 
   // --- State Modals ---
   const [isFakturModalOpen, setIsFakturModalOpen] = useState(false);
@@ -256,8 +257,42 @@ export default function POSPage() {
     setCartItems([]);
     setDpAmount(0);
     setGuideVoucher(null);
+    setGuideInfo({ isGuideOrder: false, guideName: '' });
     setPaymentMode('pay_now');
   }, []);
+
+  const handleApplyVoucher = useCallback((voucher: AppliedGuideVoucher | null) => {
+    setGuideVoucher(voucher);
+    if (!voucher) {
+      // Remove free items if voucher is removed
+      setCartItems(prev => prev.filter(i => !i.isFree));
+      return;
+    }
+
+    if (voucher.rewards?.freeProducts && voucher.rewards.freeProducts.length > 0) {
+      const newFreeItems: OrderItem[] = [];
+      voucher.rewards.freeProducts.forEach((freeProd: any) => {
+        const product = products.find(p => p._id === freeProd.productId);
+        if (product) {
+          newFreeItems.push({
+            productId: product._id,
+            name: product.name,
+            price: 0,
+            quantity: freeProd.quantity,
+            notes: '',
+            isFree: true
+          });
+        }
+      });
+      if (newFreeItems.length > 0) {
+        setCartItems(prev => {
+          // Remove existing free items to avoid duplicates
+          const withoutFree = prev.filter(i => !i.isFree);
+          return [...withoutFree, ...newFreeItems];
+        });
+      }
+    }
+  }, [products]);
 
   // --- Handler Pilih Faktur Gantung untuk Dilunasi ---
   const handleSelectFakturOrder = useCallback((order: Order) => {
@@ -280,9 +315,10 @@ export default function POSPage() {
       setGuideVoucher({
         code: order.guideCode,
         guideName: order.guideName || 'Guide',
-        rewardType: order.discountAmount ? 'discount' : 'cashback',
-        amountType: 'nominal',
-        amount: order.discountAmount || order.guideCommission
+        rewards: {
+          cashbackAmount: order.guideCommission || 0,
+          discountPercentage: order.discountAmount ? (order.discountAmount / order.subtotal) * 100 : 0
+        }
       });
     } else {
       setGuideVoucher(null);
@@ -302,10 +338,11 @@ export default function POSPage() {
     let guideCommission = 0;
     let discountAmount = 0;
     if (guideVoucher) {
-      if (guideVoucher.rewardType === 'cashback') {
-        guideCommission = guideVoucher.amountType === 'percentage' ? (subtotal * guideVoucher.amount / 100) : guideVoucher.amount;
-      } else {
-        discountAmount = guideVoucher.amountType === 'percentage' ? (subtotal * guideVoucher.amount / 100) : guideVoucher.amount;
+      if (guideVoucher.rewards?.cashbackAmount) {
+        guideCommission = guideVoucher.rewards.cashbackAmount;
+      }
+      if (guideVoucher.rewards?.discountPercentage) {
+        discountAmount = (subtotal * guideVoucher.rewards.discountPercentage) / 100;
       }
     }
     const grandTotal = Math.max(0, subtotal - dpAmount - discountAmount);
@@ -325,7 +362,9 @@ export default function POSPage() {
         discountAmount,
         guideCommission,
         guideCode: guideVoucher?.code || '',
-        guideName: guideVoucher?.guideName || '',
+        guideName: guideVoucher?.guideName || (guideInfo.isGuideOrder ? (guideInfo.guideName || 'Guide') : ''),
+        isGuideOrder: guideInfo.isGuideOrder,
+        isGuideRewardProcessed: false,
         grandTotal,
         amountReceived: 0,
         changeAmount: 0,
@@ -354,6 +393,7 @@ export default function POSPage() {
     orderType,
     dpAmount,
     guideVoucher,
+    guideInfo,
     activeOrderId,
     handleClearCart,
     fetchData,
@@ -369,10 +409,11 @@ export default function POSPage() {
     let guideCommission = 0;
     let discountAmount = 0;
     if (guideVoucher) {
-      if (guideVoucher.rewardType === 'cashback') {
-        guideCommission = guideVoucher.amountType === 'percentage' ? (subtotal * guideVoucher.amount / 100) : guideVoucher.amount;
-      } else {
-        discountAmount = guideVoucher.amountType === 'percentage' ? (subtotal * guideVoucher.amount / 100) : guideVoucher.amount;
+      if (guideVoucher.rewards?.cashbackAmount) {
+        guideCommission = guideVoucher.rewards.cashbackAmount;
+      }
+      if (guideVoucher.rewards?.discountPercentage) {
+        discountAmount = (subtotal * guideVoucher.rewards.discountPercentage) / 100;
       }
     }
     const grandTotal = Math.max(0, subtotal - dpAmount - discountAmount);
@@ -409,13 +450,16 @@ export default function POSPage() {
             discountAmount,
             guideCommission,
             guideCode: guideVoucher?.code || '',
-            guideName: guideVoucher?.guideName || '',
+            guideName: guideVoucher?.guideName || (guideInfo.isGuideOrder ? (guideInfo.guideName || 'Guide') : ''),
+            isGuideOrder: guideInfo.isGuideOrder,
+            isGuideRewardProcessed: false,
             grandTotal,
             amountReceived,
             changeAmount: change
           })
         });
       }
+
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Gagal memproses transaksi');
@@ -435,7 +479,7 @@ export default function POSPage() {
     } catch (err: any) {
       alert(err.message);
     }
-  }, [cartItems, dpAmount, guideVoucher, tableNumber, orderType, customerName, activeOrderId, showNotification, fetchData]);
+  }, [cartItems, dpAmount, guideVoucher, guideInfo, tableNumber, orderType, customerName, activeOrderId, showNotification, fetchData]);
 
   
   const handleCloseReceipt = () => {
@@ -524,8 +568,8 @@ export default function POSPage() {
 
   // --- Calculate Grand Total for Payment Modal ---
   const calculatedSubtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
-  const calculatedDiscount = guideVoucher && guideVoucher.rewardType === 'discount'
-    ? (guideVoucher.amountType === 'percentage' ? calculatedSubtotal * guideVoucher.amount / 100 : guideVoucher.amount)
+  const calculatedDiscount = guideVoucher?.rewards?.discountPercentage 
+    ? (calculatedSubtotal * guideVoucher.rewards.discountPercentage / 100)
     : 0;
   const calculatedGrandTotal = Math.max(0, calculatedSubtotal - dpAmount - calculatedDiscount);
 
@@ -633,13 +677,15 @@ export default function POSPage() {
               items={cartItems}
               paymentMode={paymentMode}
               dpAmount={dpAmount}
+              guideInfo={guideInfo}
+              onUpdateGuideInfo={setGuideInfo}
               guideVoucher={guideVoucher}
               onChangeOrderType={setOrderType}
               onUpdateTableNumber={setTableNumber}
               onUpdateCustomerName={setCustomerName}
               onUpdateQuantity={handleUpdateQuantity}
               onChangePaymentMode={setPaymentMode}
-              onApplyVoucher={setGuideVoucher}
+              onApplyVoucher={handleApplyVoucher}
               onSaveFakturGantung={handleSaveFakturGantung}
               onPayNow={() => setIsPaymentModalOpen(true)}
               onOpenVoidModal={() => setIsVoidModalOpen(true)}
