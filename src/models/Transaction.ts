@@ -29,6 +29,10 @@ export interface ITransaction extends Document {
   changeAmount: number;
   cashierName: string;
   cashierId?: mongoose.Types.ObjectId;
+  clientTxId?: string;
+  isOfflineSync?: boolean;
+  offlineCreatedAt?: Date;
+  offlineSyncedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -78,6 +82,10 @@ const TransactionSchema = new Schema<ITransaction>(
     changeAmount: { type: Number, required: true },
     cashierName: { type: String, required: true },
     cashierId: { type: Schema.Types.ObjectId, ref: 'User' },
+    clientTxId: { type: String, sparse: true, index: true },
+    isOfflineSync: { type: Boolean, default: false },
+    offlineCreatedAt: { type: Date },
+    offlineSyncedAt: { type: Date },
   },
   { timestamps: true }
 );

@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { Order } from '@/types/pos';
+import { Zap } from 'lucide-react';
 
 interface FakturGantungModalProps {
   isOpen: boolean;
@@ -131,7 +132,8 @@ export function FakturGantungModal({
 
                     {order.isSmartMerged && (
                       <div className="inline-flex items-center gap-1.5 bg-[#fefce8] text-[#ca8a04] font-bold text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-md border border-[#fef08a]">
-                        <span>⚡ SMART MERGE: Ada Penambahan Pesanan</span>
+                        <Zap className="w-3 h-3 text-amber-500 shrink-0" />
+                        <span>SMART MERGE: Ada Penambahan Pesanan</span>
                       </div>
                     )}
 

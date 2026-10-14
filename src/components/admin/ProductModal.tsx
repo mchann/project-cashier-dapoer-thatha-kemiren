@@ -133,7 +133,7 @@ function ProductForm({
       return;
     }
     if (price === '' || price < 0) {
-      setErrorMsg('Harga menu harus diisi dengan benar (≥ Rp 0).');
+      setErrorMsg('Harga menu harus diisi dengan benar (>= Rp 0).');
       return;
     }
 

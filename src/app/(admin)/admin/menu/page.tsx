@@ -6,6 +6,7 @@ import { Category, Product } from '@/types/pos';
 import { ProductTable } from '@/components/admin/ProductTable';
 import { ProductModal } from '@/components/admin/ProductModal';
 import { CategoryModal } from '@/components/admin/CategoryModal';
+import { Check } from 'lucide-react';
 
 export default function AdminMenuPage() {
   // State Data Master (Kategori & Produk)
@@ -237,7 +238,9 @@ export default function AdminMenuPage() {
       {notifMessage && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-bounce">
           <div className="bg-[#4B3832] text-[#FFFDF7] px-6 py-3 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center gap-3 border border-[#6F4E37]">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#DCC7AA] text-[#4B3832] font-bold text-xs">✓</span>
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#DCC7AA] text-[#4B3832]">
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+            </span>
             <span className="font-semibold text-sm">{notifMessage}</span>
           </div>
         </div>

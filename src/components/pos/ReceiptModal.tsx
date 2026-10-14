@@ -4,6 +4,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Order } from '@/types/pos';
 
+import { getCachedMeta } from '@/lib/offline-db';
+
 interface ReceiptModalProps {
   isOpen: boolean;
   transactionData: Order | null;
@@ -20,7 +22,10 @@ export function ReceiptModal({ isOpen, transactionData, onClose }: ReceiptModalP
       fetch('/api/settings')
         .then(res => res.json())
         .then(data => setSettings(data.receipt))
-        .catch(err => console.error('Gagal memuat pengaturan', err));
+        .catch(async () => {
+          const cached = await getCachedMeta('receiptSettings');
+          if (cached) setSettings(cached);
+        });
     }
   }, [isOpen]);
 

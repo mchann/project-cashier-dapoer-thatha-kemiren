@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { Sun, Moon } from 'lucide-react';
 
 export default function LoginPage() {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -106,7 +107,7 @@ export default function LoginPage() {
             }`}
             title="Ganti Tema Warna"
           >
-            {isDarkMode ? '🌞' : '🌙'}
+            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-[#6F4E37]" />}
           </button>
         </div>
 

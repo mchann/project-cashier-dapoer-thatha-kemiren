@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
+import { PWARegister } from "@/components/pwa/PWARegister";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,6 +17,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Cashier & Ordering System Dapoer Thatha",
   description: "Sistem POS Kasir dan E-Menu Dapoer Thatha Banyuwangi",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "POS Thatha",
+  },
 };
 
 export default function RootLayout({
@@ -30,7 +37,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <Providers>{children}</Providers>
+        <Providers>
+          <PWARegister />
+          {children}
+        </Providers>
       </body>
     </html>
   );

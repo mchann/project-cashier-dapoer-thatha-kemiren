@@ -72,6 +72,10 @@ export interface Order {
   createdAt?: string;
   updatedAt?: string;
   isSmartMerged?: boolean; // Indikator visual bahwa pesanan ini hasil penggabungan QR pesanan meja
+  clientTxId?: string;
+  isOfflineSync?: boolean;
+  offlineCreatedAt?: string;
+  offlineSyncedAt?: string;
 }
 
 export interface Partner {

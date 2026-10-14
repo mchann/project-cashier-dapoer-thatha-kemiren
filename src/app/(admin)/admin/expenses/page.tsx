@@ -1,7 +1,7 @@
 // src/app/(admin)/admin/expenses/page.tsx
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -36,13 +36,45 @@ export default function ExpensesPage() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // Filter & Pagination
-  const [viewMode, setViewMode] = useState<'today' | 'month' | 'range' | 'all'>('today');
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSearch, setActiveSearch] = useState<string | null>(null);
+  const [colSearchTanggal, setColSearchTanggal] = useState('');
+  const [colSearchKeterangan, setColSearchKeterangan] = useState('');
+  const [colSearchKategori, setColSearchKategori] = useState('');
+  const [colSearchNominal, setColSearchNominal] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('semua');
   const [startDate, setStartDate] = useState<string>(''); 
   const [endDate, setEndDate] = useState<string>(''); 
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const setFilterPreset = (preset: 'today' | 'thisMonth') => {
+    const now = new Date();
+    if (preset === 'today') {
+      const today = now.toISOString().split('T')[0];
+      setStartDate(today);
+      setEndDate(today);
+    } else if (preset === 'thisMonth') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      setStartDate(firstDay);
+      setEndDate(lastDay);
+    }
+  };
 
   const [formData, setFormData] = useState({
     title: '',
@@ -175,36 +207,52 @@ export default function ExpensesPage() {
       // 1. Kategori
       const matchCategory = categoryFilter === 'semua' || e.category === categoryFilter;
       
-      // 2. Tanggal & ViewMode
+      // 2. Tanggal
       let matchDate = true;
-      if (viewMode === 'today') {
-        const todayStr = new Date().toISOString().split('T')[0];
-        matchDate = e.date.startsWith(todayStr);
-      } else if (viewMode === 'month') {
-        const monthStr = new Date().toISOString().slice(0, 7); // YYYY-MM
-        matchDate = e.date.startsWith(monthStr);
-      } else if (viewMode === 'range') {
-        if (startDate && endDate) {
-          matchDate = e.date >= startDate && e.date <= endDate;
-        } else if (startDate) {
-          matchDate = e.date >= startDate;
-        } else if (endDate) {
-          matchDate = e.date <= endDate;
-        }
+      if (startDate && endDate) {
+        matchDate = e.date >= startDate && e.date <= endDate;
+      } else if (startDate) {
+        matchDate = e.date >= startDate;
+      } else if (endDate) {
+        matchDate = e.date <= endDate;
       }
 
       // 3. Search Query
       const q = searchQuery.toLowerCase();
       const matchSearch = q === '' || e.title.toLowerCase().includes(q) || (e.notes && e.notes.toLowerCase().includes(q));
 
-      return matchCategory && matchDate && matchSearch;
+      // 4. Column Level Search
+      let matchColTanggal = true;
+      let matchColKeterangan = true;
+      let matchColKategori = true;
+      let matchColNominal = true;
+
+      if (colSearchTanggal) {
+        const dateStr = new Date(e.date).toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'}).toLowerCase();
+        matchColTanggal = dateStr.includes(colSearchTanggal.toLowerCase());
+      }
+      if (colSearchKeterangan) {
+        const titleStr = e.title.toLowerCase();
+        const noteStr = (e.notes || '').toLowerCase();
+        matchColKeterangan = titleStr.includes(colSearchKeterangan.toLowerCase()) || noteStr.includes(colSearchKeterangan.toLowerCase());
+      }
+      if (colSearchKategori) {
+        const catStr = e.category.replace('_', ' ').toLowerCase();
+        matchColKategori = catStr.includes(colSearchKategori.toLowerCase());
+      }
+      if (colSearchNominal) {
+        const numStr = e.amount.toString();
+        matchColNominal = numStr.includes(colSearchNominal);
+      }
+
+      return matchCategory && matchDate && matchSearch && matchColTanggal && matchColKeterangan && matchColKategori && matchColNominal;
     });
-  }, [expenses, categoryFilter, startDate, endDate, viewMode, searchQuery]);
+  }, [expenses, categoryFilter, startDate, endDate, searchQuery, colSearchTanggal, colSearchKeterangan, colSearchKategori, colSearchNominal]);
 
   // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [categoryFilter, startDate, endDate, viewMode, searchQuery]);
+  }, [categoryFilter, startDate, endDate, searchQuery, colSearchTanggal, colSearchKeterangan, colSearchKategori, colSearchNominal]);
 
   // Paginate Data
   const paginatedExpenses = useMemo(() => {
@@ -266,24 +314,69 @@ export default function ExpensesPage() {
           <h1 className="text-3xl font-black tracking-tight text-[#4B3832]">Daftar Pengeluaran</h1>
           <p className="text-[#6F4E37] font-medium">Pantau total uang keluar dan operasional restoran.</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-          <button onClick={exportToPDF} className="bg-red-50 text-red-600 border border-red-200 px-4 py-3 rounded-xl font-bold hover:bg-red-100 transition-colors shadow-sm flex items-center justify-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            PDF
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Export Dropdown */}
+          <div className="relative" ref={exportMenuRef}>
+            <button 
+              type="button"
+              onClick={() => setIsExportMenuOpen((prev) => !prev)}
+              className="flex items-center gap-2 bg-[#4B3832] text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm hover:bg-[#6F4E37] transition-colors whitespace-nowrap"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+              Export
+            </button>
+            {isExportMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-[#DCC7AA] overflow-hidden z-20 animate-in fade-in slide-in-from-top-2">
+                <button onClick={() => { exportToExcel(); setIsExportMenuOpen(false); }} className="w-full text-left px-4 py-3 text-sm font-bold text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-3">
+                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM15.8 17H14v-2.2c0-.5-.1-1-.3-1.4l1.6-2h-1.8l-1.1 1.8c-.1.2-.2.5-.2.8h-.1c0-.3-.1-.5-.2-.8L10.8 11.4H9l1.6 2c-.2.4-.3.9-.3 1.4V17h-1.8v-6h1.8v2.2c0 .5.1 1 .3 1.4l1.1-1.8c.1-.2.2-.5.2-.8h.1c0 .3.1.5.2.8l1.1 1.8c.2.4.3.9.3 1.4V17z"/></svg>
+                   Export Excel
+                </button>
+                <div className="h-px bg-gray-100"></div>
+                <button onClick={() => { exportToPDF(); setIsExportMenuOpen(false); }} className="w-full text-left px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3">
+                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9.5 8.5c0 .8-.7 1.5-1.5 1.5H7v2H5.5V9H8c.8 0 1.5.7 1.5 1.5v1zm5 2c0 .8-.7 1.5-1.5 1.5h-2.5V9H13c.8 0 1.5.7 1.5 1.5v3zm4-3h-2v1.5h1.5v1.5H16.5V15H15V9h3.5v1.5zM7 10.5h1v1H7v-1zm6.5 0h1v3h-1v-3z"/></svg>
+                   Export PDF
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Date Filter */}
+          <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-[#DCC7AA] shadow-sm max-w-full overflow-x-auto scrollbar-hide">
+            <button onClick={() => setFilterPreset('today')} className="text-xs font-bold px-3 py-2 hover:bg-[#F5E6CA] rounded-lg transition-colors">Hari Ini</button>
+            <button onClick={() => setFilterPreset('thisMonth')} className="text-xs font-bold px-3 py-2 hover:bg-[#F5E6CA] rounded-lg transition-colors">Bulan Ini</button>
+            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+            <input 
+              type="date" 
+              value={startDate} 
+              onChange={e => setStartDate(e.target.value)}
+              className="text-sm border-none outline-none bg-transparent font-medium"
+            />
+            <span className="text-gray-400">-</span>
+            <input 
+              type="date" 
+              value={endDate} 
+              onChange={e => setEndDate(e.target.value)}
+              className="text-sm border-none outline-none bg-transparent font-medium"
+            />
+          </div>
+
+          <button 
+            onClick={() => setIsSettingsModalOpen(true)}
+            className="bg-white border border-[#DCC7AA] text-[#6F4E37] px-4 py-2.5 rounded-xl font-bold text-sm tracking-wide hover:bg-[#F5E6CA] transition-colors shadow-sm flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            Kategori & Satuan
           </button>
-          <button onClick={exportToExcel} className="bg-green-50 text-green-600 border border-green-200 px-4 py-3 rounded-xl font-bold hover:bg-green-100 transition-colors shadow-sm flex items-center justify-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            Excel
-          </button>
+
           <button 
             onClick={() => {
               setEditingId(null);
               setFormData({ title: '', amount: '', quantity: '1', unit: 'KG', category: 'bahan_baku', date: new Date().toISOString().split('T')[0], notes: '' });
               setIsModalOpen(true);
             }}
-            className="bg-[#4B3832] text-white px-6 py-3 rounded-xl font-bold tracking-wide hover:bg-[#6F4E37] transition-colors shadow-md flex items-center justify-center gap-2"
+            className="bg-[#4B3832] text-white px-5 py-2.5 rounded-xl font-bold text-sm tracking-wide hover:bg-[#6F4E37] transition-colors shadow-md flex items-center gap-2"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
             Catat Pengeluaran
           </button>
         </div>
@@ -312,34 +405,6 @@ export default function ExpensesPage() {
           
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
             
-            {/* View Mode Toggle */}
-            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl shadow-inner shrink-0 w-full md:w-auto overflow-x-auto hide-scrollbar">
-              <button 
-                onClick={() => setViewMode('today')}
-                className={`flex-none px-4 py-2 rounded-lg text-sm font-black whitespace-nowrap transition-all ${viewMode === 'today' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Hari Ini
-              </button>
-              <button 
-                onClick={() => setViewMode('month')}
-                className={`flex-none px-4 py-2 rounded-lg text-sm font-black whitespace-nowrap transition-all ${viewMode === 'month' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Bulan Ini
-              </button>
-              <button 
-                onClick={() => setViewMode('range')}
-                className={`flex-none px-4 py-2 rounded-lg text-sm font-black whitespace-nowrap transition-all ${viewMode === 'range' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Rentang Waktu
-              </button>
-              <button 
-                onClick={() => setViewMode('all')}
-                className={`flex-none px-4 py-2 rounded-lg text-sm font-black whitespace-nowrap transition-all ${viewMode === 'all' ? 'bg-white text-[#4B3832] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Semua
-              </button>
-            </div>
-
             {/* Pencarian */}
             <div className="relative w-full md:w-64 shrink-0">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -372,25 +437,6 @@ export default function ExpensesPage() {
                 </button>
               ))}
             </div>
-
-            {/* Filter Tanggal Khusus (Jika View Mode = Range) */}
-            {viewMode === 'range' && (
-              <div className="flex items-center gap-2 w-full md:w-auto bg-[#FFFDF7] border border-[#DCC7AA] rounded-xl px-4 py-1.5 shadow-sm">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-transparent border-none outline-none font-bold text-sm text-[#4B3832]"
-                />
-                <span className="text-[#6F4E37] font-bold text-xs">-</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="bg-transparent border-none outline-none font-bold text-sm text-[#4B3832]"
-                />
-              </div>
-            )}
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -398,11 +444,76 @@ export default function ExpensesPage() {
             <thead className="bg-[#FFFDF7] text-xs uppercase font-black text-[#6F4E37] border-b">
               <tr>
                 <th className="px-6 py-4 text-center w-16">No</th>
-                <th className="px-6 py-4">Tanggal</th>
-                <th className="px-6 py-4">Keterangan</th>
-                <th className="px-6 py-4">Kategori</th>
-                <th className="px-6 py-4 text-right">Nominal</th>
-                  <th className="px-6 py-4 text-center">Aksi</th>
+                
+                <th className="px-6 py-4 group">
+                  <div className="flex items-center justify-between gap-2">
+                    {activeSearch === 'tanggal' || colSearchTanggal ? (
+                      <input autoFocus={activeSearch === 'tanggal'} type="text" placeholder="Cari..." className="w-full bg-white border border-[#DCC7AA] rounded px-2 py-1 text-xs font-normal text-gray-700 focus:outline-none" value={colSearchTanggal} onChange={e => setColSearchTanggal(e.target.value)} onBlur={() => setActiveSearch(null)} />
+                    ) : (
+                      <span className="cursor-pointer flex-1" onClick={() => setActiveSearch('tanggal')}>Tanggal</span>
+                    )}
+                    <button onClick={() => { if (colSearchTanggal || activeSearch === 'tanggal') { setColSearchTanggal(''); setActiveSearch(null); } else { setActiveSearch('tanggal'); } }} className="text-gray-400 hover:text-[#6F4E37] flex-shrink-0">
+                      {colSearchTanggal || activeSearch === 'tanggal' ? (
+                        <svg className="w-3.5 h-3.5 text-red-400 hover:text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                      )}
+                    </button>
+                  </div>
+                </th>
+
+                <th className="px-6 py-4 group">
+                  <div className="flex items-center justify-between gap-2">
+                    {activeSearch === 'keterangan' || colSearchKeterangan ? (
+                      <input autoFocus={activeSearch === 'keterangan'} type="text" placeholder="Cari ket..." className="w-full bg-white border border-[#DCC7AA] rounded px-2 py-1 text-xs font-normal text-gray-700 focus:outline-none" value={colSearchKeterangan} onChange={e => setColSearchKeterangan(e.target.value)} onBlur={() => setActiveSearch(null)} />
+                    ) : (
+                      <span className="cursor-pointer flex-1" onClick={() => setActiveSearch('keterangan')}>Keterangan</span>
+                    )}
+                    <button onClick={() => { if (colSearchKeterangan || activeSearch === 'keterangan') { setColSearchKeterangan(''); setActiveSearch(null); } else { setActiveSearch('keterangan'); } }} className="text-gray-400 hover:text-[#6F4E37] flex-shrink-0">
+                      {colSearchKeterangan || activeSearch === 'keterangan' ? (
+                        <svg className="w-3.5 h-3.5 text-red-400 hover:text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                      )}
+                    </button>
+                  </div>
+                </th>
+
+                <th className="px-6 py-4 group">
+                  <div className="flex items-center justify-between gap-2">
+                    {activeSearch === 'kategori' || colSearchKategori ? (
+                      <input autoFocus={activeSearch === 'kategori'} type="text" placeholder="Cari kategori..." className="w-full bg-white border border-[#DCC7AA] rounded px-2 py-1 text-xs font-normal text-gray-700 focus:outline-none" value={colSearchKategori} onChange={e => setColSearchKategori(e.target.value)} onBlur={() => setActiveSearch(null)} />
+                    ) : (
+                      <span className="cursor-pointer flex-1" onClick={() => setActiveSearch('kategori')}>Kategori</span>
+                    )}
+                    <button onClick={() => { if (colSearchKategori || activeSearch === 'kategori') { setColSearchKategori(''); setActiveSearch(null); } else { setActiveSearch('kategori'); } }} className="text-gray-400 hover:text-[#6F4E37] flex-shrink-0">
+                      {colSearchKategori || activeSearch === 'kategori' ? (
+                        <svg className="w-3.5 h-3.5 text-red-400 hover:text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                      )}
+                    </button>
+                  </div>
+                </th>
+
+                <th className="px-6 py-4 group text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    {activeSearch === 'nominal' || colSearchNominal ? (
+                      <input autoFocus={activeSearch === 'nominal'} type="text" placeholder="Cari nom..." className="w-full max-w-[100px] bg-white border border-[#DCC7AA] rounded px-2 py-1 text-xs font-normal text-gray-700 focus:outline-none text-right" value={colSearchNominal} onChange={e => setColSearchNominal(e.target.value)} onBlur={() => setActiveSearch(null)} />
+                    ) : (
+                      <span className="cursor-pointer flex-1" onClick={() => setActiveSearch('nominal')}>Nominal</span>
+                    )}
+                    <button onClick={() => { if (colSearchNominal || activeSearch === 'nominal') { setColSearchNominal(''); setActiveSearch(null); } else { setActiveSearch('nominal'); } }} className="text-gray-400 hover:text-[#6F4E37] flex-shrink-0">
+                      {colSearchNominal || activeSearch === 'nominal' ? (
+                        <svg className="w-3.5 h-3.5 text-red-400 hover:text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                      )}
+                    </button>
+                  </div>
+                </th>
+
+                <th className="px-6 py-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium">
@@ -545,14 +656,15 @@ export default function ExpensesPage() {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="block text-xs font-bold uppercase tracking-wider opacity-80">Kategori</label>
-                  <button type="button" onClick={() => setIsSettingsModalOpen(true)} className="text-[10px] bg-[#F5E6CA] text-[#6F4E37] px-2 py-1 rounded-md font-bold hover:bg-[#DCC7AA] transition-colors">+ Atur Kategori/Satuan</button>
                 </div>
                 <select 
                   value={formData.category}
                   onChange={(e) => setFormData({...formData, category: e.target.value})}
                   className="w-full border rounded-xl px-4 py-3 outline-none focus:border-[#DCC7AA] bg-[#FFFDF7]"
                 >
-                  {categories.map(c => (
+                  {categories
+                    .filter(c => c.toLowerCase() !== 'gaji')
+                    .map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>

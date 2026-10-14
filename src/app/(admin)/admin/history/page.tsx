@@ -249,6 +249,9 @@ export default function AdminOrderHistoryPage() {
                                   {order.isGuideOrder && (
                                     <span className="bg-orange-100 text-orange-600 text-[10px] font-black px-2 py-0.5 rounded border border-orange-200">GUIDE</span>
                                   )}
+                                  {order.isOfflineSync && (
+                                    <span className="bg-purple-100 text-purple-700 text-[10px] font-black px-2 py-0.5 rounded border border-purple-200" title="Dicatat saat offline dan telah disinkronkan">OFFLINE</span>
+                                  )}
                                 </div>
                               </td>
                               <td className="px-5 py-4 whitespace-nowrap">{new Date(order.createdAt || '').toLocaleString('id-ID')}</td>

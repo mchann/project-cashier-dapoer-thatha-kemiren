@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { Product } from '@/types/pos';
+import { CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 
 interface ProductTableProps {
   products: Product[];
@@ -156,7 +157,7 @@ export function ProductTable({
                     <button
                       type="button"
                       onClick={() => onToggleAvailable(p._id, p.isAvailable || false)}
-                      className={`px-3 py-1.5 rounded-full font-bold text-[11px] uppercase tracking-wider transition-all border ${
+                      className={`px-3 py-1.5 rounded-full font-bold text-[11px] uppercase tracking-wider transition-all border inline-flex items-center gap-1.5 ${
                         isOffline
                           ? 'bg-[#fef2f2] text-[#ef4444] border-[#fecaca] hover:bg-[#fee2e2]'
                           : isOutOfStock
@@ -164,7 +165,22 @@ export function ProductTable({
                           : 'bg-[#ecfdf5] text-[#10b981] border-[#a7f3d0] hover:bg-[#d1fae5]'
                       }`}
                     >
-                      {isOffline ? '✖ OFF' : isOutOfStock ? 'HABIS' : '✔ AKTIF'}
+                      {isOffline ? (
+                        <>
+                          <XCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>OFF</span>
+                        </>
+                      ) : isOutOfStock ? (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                          <span>HABIS</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          <span>AKTIF</span>
+                        </>
+                      )}
                     </button>
                   </td>
 

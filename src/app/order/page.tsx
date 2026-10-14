@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { Sun, Moon } from 'lucide-react';
 
 export default function OrderPage() {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -129,7 +130,7 @@ export default function OrderPage() {
             <button onClick={() => setIsDarkMode(!isDarkMode)} className={`p-2 rounded-full border transition-colors ${
               isDarkMode ? 'border-[#e5d3b3]/30 hover:border-[#e5d3b3] text-[#e5d3b3]' : 'border-[#DCC7AA] hover:border-[#4B3832] text-[#6F4E37]'
             }`}>
-              {isDarkMode ? '🌞' : '🌙'}
+              {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-[#6F4E37]" />}
             </button>
             {step < 3 && (
               <Link href="/" className={`text-[10px] uppercase tracking-[0.2em] px-6 py-3 border transition-colors ${

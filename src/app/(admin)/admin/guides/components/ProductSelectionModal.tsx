@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Product, Category } from '@/types/pos';
 import Image from 'next/image';
+void Image;
 
 interface Props {
   isOpen: boolean;
@@ -35,7 +36,7 @@ export function ProductSelectionModal({ isOpen, onClose, products, categories, o
       <div className="bg-[#FFFDF7] rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         <div className="bg-[#4B3832] px-6 py-4 flex justify-between items-center shrink-0">
           <h3 className="text-[#FFFDF7] font-black text-lg tracking-wide">Pilih Makanan Gratis</h3>
-          <button onClick={onClose} className="text-[#FFFDF7]/70 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-[#FFFDF7]/70 hover:text-white transition-colors" title="Tutup">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -69,29 +70,37 @@ export function ProductSelectionModal({ isOpen, onClose, products, categories, o
 
         <div className="p-4 overflow-y-auto flex-1">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {filteredProducts.map(product => (
-              <div 
-                key={product._id} 
-                onClick={() => {
-                  onSelect(product._id, 1);
-                  onClose();
-                }}
-                className="bg-white border border-[#DCC7AA]/50 rounded-2xl overflow-hidden cursor-pointer hover:border-[#4B3832] hover:shadow-md transition-all group flex flex-col"
-              >
-                <div className="relative h-24 bg-[#F5E6CA]">
-                  {product.image ? (
-                    <Image src={product.image} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-[#DCC7AA]">
-                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    </div>
-                  )}
+            {filteredProducts.map(product => {
+              const category = categories.find(c => c._id === product.categoryId);
+              return (
+                <div 
+                  key={product._id} 
+                  onClick={() => {
+                    onSelect(product._id, 1);
+                    onClose();
+                  }}
+                  className="bg-white border border-[#DCC7AA]/70 rounded-2xl p-3.5 cursor-pointer hover:border-[#4B3832] hover:bg-[#F5E6CA]/20 hover:shadow-md transition-all group flex flex-col justify-between gap-3 active:scale-[0.98]"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="font-bold text-[#4B3832] text-sm leading-tight group-hover:text-[#6F4E37] transition-colors">
+                      {product.name}
+                    </h4>
+                    <span className="w-5 h-5 rounded-full bg-[#F5E6CA] group-hover:bg-[#4B3832] group-hover:text-white text-[#6F4E37] flex items-center justify-center shrink-0 transition-colors text-xs font-black">
+                      +
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[#DCC7AA]/20">
+                    <span className="text-[10px] font-bold text-[#8B7355] bg-[#F5E6CA]/60 px-2 py-0.5 rounded-md truncate max-w-[100px]">
+                      {category?.name || 'Menu'}
+                    </span>
+                    <span className="text-xs font-extrabold text-[#4B3832]">
+                      Rp {product.price?.toLocaleString('id-ID')}
+                    </span>
+                  </div>
                 </div>
-                <div className="p-3 flex-1 flex flex-col justify-center">
-                  <h4 className="font-bold text-[#4B3832] text-sm leading-tight text-center">{product.name}</h4>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {filteredProducts.length === 0 && (
               <div className="col-span-full text-center py-8 text-[#8B7355] font-bold text-sm">
                 Menu tidak ditemukan.

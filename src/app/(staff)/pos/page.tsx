@@ -16,10 +16,20 @@ import { VoidPinModal } from '@/components/pos/VoidPinModal';
 import { PaymentModal } from '@/components/pos/PaymentModal';
 import { ReceiptModal } from '@/components/pos/ReceiptModal';
 import { TarikReservasiModal } from '@/components/pos/TarikReservasiModal';
+import { OfflineSyncModal } from '@/components/pos/OfflineSyncModal';
+import { useOfflineSync } from '@/context/OfflineSyncContext';
+import { saveMasterDataToDB, getCachedCategories, getCachedProducts } from '@/lib/offline-db';
 import { useSession } from 'next-auth/react';
+import { Command } from 'lucide-react';
 
 export default function POSPage() {
+  const [mounted, setMounted] = useState(false);
   const { data: session } = useSession();
+  const { isOnline, recordOfflineTransaction } = useOfflineSync();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // --- State Filter Kategori & Pencarian ---
   const [activeCategorySlug, setActiveCategorySlug] = useState<string>('all');
@@ -69,41 +79,71 @@ export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
 
   const fetchData = useCallback(async () => {
+    let fetchedCats: Category[] = [];
+    let fetchedProds: Product[] = [];
+
     try {
       const resCat = await fetch('/api/admin/categories');
       if (resCat.ok) {
         const dataCat = await resCat.json();
-        // Tambahkan "Semua Menu" di paling depan
-        setCategories([
+        fetchedCats = [
           { _id: 'cat-all', name: 'Semua Menu', slug: 'all' },
           ...dataCat
-        ]);
+        ];
+        setCategories(fetchedCats);
       }
+
       const resProd = await fetch('/api/admin/products');
       if (resProd.ok) {
         const dataProd = await resProd.json();
+        const formattedProd = dataProd.map((p: any) => ({
+          ...p,
+          categoryId: p.categoryId?._id || p.categoryId,
+          category: p.categoryId?._id ? p.categoryId : undefined
+        })).filter((p: any) => p.isAvailable !== false);
+        fetchedProds = formattedProd;
+        setProducts(formattedProd);
+      }
+
       const resPending = await fetch('/api/pos/transactions/pending');
       if (resPending.ok) {
         const dataPending = await resPending.json();
         setFakturOrders(dataPending);
       }
-        // Mongoose populate menggantikan categoryId dengan object, kita normalkan:
-        const formattedProd = dataProd.map((p: any) => ({
-          ...p,
-          categoryId: p.categoryId?._id || p.categoryId,
-          category: p.categoryId?._id ? p.categoryId : undefined
-        }));
-        setProducts(formattedProd.filter((p: any) => p.isAvailable !== false));
-      }
+
       const resStats = await fetch('/api/admin/dashboard');
       if (resStats.ok) {
         const dataStats = await resStats.json();
         setDashboardStats({ revenueToday: dataStats.revenueToday, transactionsCount: dataStats.transactionsCount });
       }
+
+      // Simpan master data ke IndexedDB untuk cadangan offline
+      if (fetchedCats.length > 0 || fetchedProds.length > 0) {
+        saveMasterDataToDB({
+          categories: fetchedCats,
+          products: fetchedProds,
+          cashierProfile: session?.user ? {
+            id: session.user.id,
+            name: session.user.name || undefined,
+            role: session.user.role || undefined,
+            username: session.user.username || undefined
+          } : undefined
+        }).catch(() => {});
+      }
     } catch (err) {
-      console.error('Failed to fetch data', err);
+      console.warn('Network offline / gagal fetch data, memuat dari memori lokal IndexedDB...', err);
+      // Fallback: muat dari IndexedDB lokal
+      const cachedCats = await getCachedCategories();
+      const cachedProds = await getCachedProducts();
+      if (cachedCats.length > 0) {
+        setCategories(cachedCats);
+      }
+      if (cachedProds.length > 0) {
+        setProducts(cachedProds);
+      }
+      showNotification('Mode Offline: Berhasil memuat daftar menu dari memori lokal perangkat.');
     }
-  }, []);
+  }, [session, showNotification]);
 
   useEffect(() => {
     fetchData();
@@ -401,8 +441,8 @@ export default function POSPage() {
   ]);
 
 
-  // --- Handler Bayar Lunas ---
-    const handleConfirmPayment = useCallback(async (amountReceived: number, change: number, paymentMethod: 'tunai' | 'qris') => {
+  // --- Handler Bayar Lunas (Online & Offline Support) ---
+  const handleConfirmPayment = useCallback(async (amountReceived: number, change: number, paymentMethod: 'tunai' | 'qris') => {
     if (cartItems.length === 0) return;
     const subtotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
     
@@ -418,68 +458,151 @@ export default function POSPage() {
     }
     const grandTotal = Math.max(0, subtotal - dpAmount - discountAmount);
 
-    try {
-      let res;
-      if (activeOrderId) {
-        // Lunasi faktur gantung
-        res = await fetch(`/api/pos/transactions/${activeOrderId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            paymentStatus: 'paid',
-            paymentMethod,
-            amountReceived,
-            changeAmount: change
-          })
-        });
-      } else {
-        // Transaksi baru langsung lunas
-        res = await fetch('/api/pos/transactions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            invoiceNumber: `INV-${Date.now()}`,
-            tableNumber: orderType === 'takeaway' ? 'TA' : (tableNumber || '00'),
-            customerName: customerName || (orderType === 'takeaway' ? 'Bungkus' : 'Makan Sini'),
-            orderType,
-            paymentStatus: 'paid',
-            paymentMethod,
-            items: cartItems,
-            subtotal,
-            dpAmount,
-            discountAmount,
-            guideCommission,
-            guideCode: guideVoucher?.code || '',
-            guideName: guideVoucher?.guideName || (guideInfo.isGuideOrder ? (guideInfo.guideName || 'Guide') : ''),
-            isGuideOrder: guideInfo.isGuideOrder,
-            isGuideRewardProcessed: false,
-            grandTotal,
-            amountReceived,
-            changeAmount: change
-          })
-        });
+    let useOfflineFallback = !isOnline;
+    let transactionResult: any = null;
+
+    if (!useOfflineFallback) {
+      try {
+        let res;
+        if (activeOrderId) {
+          // Lunasi faktur gantung
+          res = await fetch(`/api/pos/transactions/${activeOrderId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paymentStatus: 'paid',
+              paymentMethod,
+              amountReceived,
+              changeAmount: change
+            })
+          });
+        } else {
+          // Transaksi baru langsung lunas
+          res = await fetch('/api/pos/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              invoiceNumber: `INV-${Date.now()}`,
+              tableNumber: orderType === 'takeaway' ? 'TA' : (tableNumber || '00'),
+              customerName: customerName || (orderType === 'takeaway' ? 'Bungkus' : 'Makan Sini'),
+              orderType,
+              paymentStatus: 'paid',
+              paymentMethod,
+              items: cartItems,
+              subtotal,
+              dpAmount,
+              discountAmount,
+              guideCommission,
+              guideCode: guideVoucher?.code || '',
+              guideName: guideVoucher?.guideName || (guideInfo.isGuideOrder ? (guideInfo.guideName || 'Guide') : ''),
+              isGuideOrder: guideInfo.isGuideOrder,
+              isGuideRewardProcessed: false,
+              grandTotal,
+              amountReceived,
+              changeAmount: change
+            })
+          });
+        }
+
+        if (res.ok) {
+          transactionResult = await res.json();
+        } else {
+          // Jika server error (500/503) atau jaringan tidak stabil, fallback ke offline
+          if (res.status >= 500) {
+            useOfflineFallback = true;
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || 'Gagal memproses transaksi');
+          }
+        }
+      } catch (err: any) {
+        // Jika fetch network error (koneksi terputus saat transaksi)
+        if (err.name === 'TypeError' || err.message?.includes('fetch') || err.message?.includes('Network')) {
+          useOfflineFallback = true;
+        } else {
+          alert(err.message);
+          return;
+        }
       }
+    }
 
+    // Jika sedang Offline atau server tidak terjangkau, simpan ke IndexedDB lokal
+    if (useOfflineFallback) {
+      const clientTxId = `tx_offline_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const offlineInvoice = `INV-OFFLINE-${Date.now()}`;
+      const offlineCreatedAt = new Date().toISOString();
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Gagal memproses transaksi');
+      const offlinePayload = {
+        clientTxId,
+        invoiceNumber: offlineInvoice,
+        tableNumber: orderType === 'takeaway' ? 'TA' : (tableNumber || '00'),
+        customerName: customerName || (orderType === 'takeaway' ? 'Bungkus' : 'Makan Sini'),
+        orderType,
+        paymentStatus: 'paid' as const,
+        paymentMethod,
+        items: cartItems,
+        subtotal,
+        dpAmount,
+        discountAmount,
+        guideCommission,
+        guideCode: guideVoucher?.code || '',
+        guideName: guideVoucher?.guideName || (guideInfo.isGuideOrder ? (guideInfo.guideName || 'Guide') : ''),
+        isGuideOrder: guideInfo.isGuideOrder,
+        isGuideRewardProcessed: false,
+        grandTotal,
+        amountReceived,
+        changeAmount: change,
+        cashierName: session?.user?.name || session?.user?.username || 'Kasir',
+        cashierId: session?.user?.id,
+        offlineCreatedAt
+      };
+
+      await recordOfflineTransaction(offlinePayload);
+
+      transactionResult = {
+        _id: clientTxId,
+        ...offlinePayload,
+        isOfflineSync: true,
+        createdAt: offlineCreatedAt
+      };
 
       setIsPaymentModalOpen(false);
-      
-      let notif = `PEMBAYARAN LUNAS BERHASIL! Meja ${tableNumber || '-'}. Total dibayar: Rp ${grandTotal.toLocaleString('id-ID')}.`;
-      if (change > 0) notif += ` Kembalian: Rp ${change.toLocaleString('id-ID')}.`;
-      
-      showNotification(notif);
-      
-      // Buka receipt modal dan simpan data transaksi
-      setLastTransaction(data);
+      showNotification(`MODE OFFLINE: Transaksi disimpan di perangkat! Struk dicetak. Data akan disinkronkan saat online.`);
+      setLastTransaction(transactionResult);
       setIsReceiptModalOpen(true);
-      fetchData();
-      
-    } catch (err: any) {
-      alert(err.message);
+      setDashboardStats(prev => ({
+        revenueToday: prev.revenueToday + grandTotal,
+        transactionsCount: prev.transactionsCount + 1
+      }));
+      return;
     }
-  }, [cartItems, dpAmount, guideVoucher, guideInfo, tableNumber, orderType, customerName, activeOrderId, showNotification, fetchData]);
+
+    setIsPaymentModalOpen(false);
+    
+    let notif = `PEMBAYARAN LUNAS BERHASIL! Meja ${tableNumber || '-'}. Total dibayar: Rp ${grandTotal.toLocaleString('id-ID')}.`;
+    if (change > 0) notif += ` Kembalian: Rp ${change.toLocaleString('id-ID')}.`;
+    
+    showNotification(notif);
+    
+    // Buka receipt modal dan simpan data transaksi
+    setLastTransaction(transactionResult);
+    setIsReceiptModalOpen(true);
+    fetchData();
+  }, [
+    cartItems,
+    dpAmount,
+    guideVoucher,
+    guideInfo,
+    tableNumber,
+    orderType,
+    customerName,
+    activeOrderId,
+    showNotification,
+    fetchData,
+    isOnline,
+    recordOfflineTransaction,
+    session
+  ]);
 
   
   const handleCloseReceipt = () => {
@@ -572,6 +695,16 @@ export default function POSPage() {
     ? (calculatedSubtotal * guideVoucher.rewards.discountPercentage / 100)
     : 0;
   const calculatedGrandTotal = Math.max(0, calculatedSubtotal - dpAmount - calculatedDiscount);
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#FFFDF7]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-[#4B3832] border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-bold text-[#6F4E37] tracking-wider uppercase">Memuat Kasir Dapoer Thatha...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#FFFDF7]">
@@ -582,93 +715,117 @@ export default function POSPage() {
         onOpenPrinter={() => setIsPrinterModalOpen(true)}
       />
 
-      {/* 1. Header POS Kasir */}
-      <POSHeader
-        cashierName={session?.user?.name || 'Kasir'}
-        shiftName={session?.user?.role || 'Staff'}
-        openOrdersCount={fakturOrders.length}
-        totalOrders={dashboardStats.transactionsCount}
-        totalRevenue={dashboardStats.revenueToday}
-        onOpenSidebar={() => setIsSidebarOpen(true)}
-        onOpenFakturGantung={() => setIsFakturModalOpen(true)}
-        onOpenTarikReservasi={() => setIsTarikReservasiModalOpen(true)}
-      />
-
-      {/* 2. Banner Notifikasi Aksi (A11y Live Region) */}
-      {notifMessage && (
-        <div
-          role="alert"
-          aria-live="assertive"
-          className="bg-emerald-600 text-white font-extrabold px-6 py-3 border-b-4 border-emerald-800 shadow-md flex items-center justify-between z-10"
-        >
-          <span className="flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
-            {notifMessage}
-          </span>
-          <button
-            type="button"
-            onClick={() => setNotifMessage('')}
-            className="text-xs font-black uppercase px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 rounded-lg border border-emerald-700 cursor-pointer transition-colors"
-          >
-            Tutup
-          </button>
+      {/* ========================================================
+          1. TOP BAR TERINTEGRASI (SEJAJAR):
+             Kiri: Header Kasir & Navigasi
+             Kanan: Input Kode Pesanan
+             Dibatasi Garis Penengah Tepi (Vertical Divider)
+          ======================================================== */}
+      <header className="shrink-0 flex items-stretch bg-[#FFFDF7] border-b border-[#DCC7AA]/60 z-30">
+        {/* Sisi Kiri Top Bar: POSHeader */}
+        <div className="flex-1 min-w-0">
+          <POSHeader
+            cashierName={session?.user?.name || 'Kasir'}
+            shiftName={session?.user?.role || 'Staff'}
+            openOrdersCount={fakturOrders.length}
+            totalOrders={dashboardStats.transactionsCount}
+            totalRevenue={dashboardStats.revenueToday}
+            onOpenSidebar={() => setIsSidebarOpen(true)}
+            onOpenFakturGantung={() => setIsFakturModalOpen(true)}
+            onOpenTarikReservasi={() => setIsTarikReservasiModalOpen(true)}
+          />
         </div>
-      )}
 
-      {/* 3. Area Utama Kasir (Katalog Menu Kiri & Keranjang Kanan) */}
-      <div className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden min-h-0">
-        {/* Kolom Kiri: Katalog Menu & Kategori (Span 7 / 8) */}
-        <section className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6 overflow-y-auto pb-4 custom-scrollbar">
-          
-          {/* Search Bar */}
-          <div className="relative w-full">
-            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6F4E37]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        {/* GARIS PEMBATAS TEPI DI TOP BAR (Vertical Divider) */}
+        <div className="w-[1px] bg-[#DCC7AA]/60 shrink-0" />
+
+        {/* Sisi Kanan Top Bar: Input Kode Pesanan (Sejajar dengan Navbar) */}
+        <div className="w-full lg:w-[390px] xl:w-[420px] 2xl:w-[450px] shrink-0 px-3 md:px-4 py-2 flex items-center bg-[#FFFDF7]">
+          <form onSubmit={handlePullOrder} className="flex gap-2 w-full">
             <input 
               type="text" 
-              placeholder="Cari Menu..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-[#FFFDF7] border-2 border-[#DCC7AA]/40 text-[#4B3832] pl-12 pr-12 py-3.5 rounded-[2rem] font-medium outline-none focus:border-[#DCC7AA] focus:shadow-sm transition-all"
+              placeholder="Kode Pesanan (Cth: 1234)" 
+              value={pullCode}
+              onChange={(e) => setPullCode(e.target.value)}
+              className="flex-1 bg-white border border-[#DCC7AA] focus:border-[#4B3832] text-[#4B3832] px-3 py-1.5 rounded-xl font-medium outline-none transition-all uppercase text-xs"
+              maxLength={4}
+              inputMode="numeric"
             />
-            {/* Command Icon placeholder on the right */}
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6F4E37]/40 text-xs font-bold border border-[#DCC7AA]/40 px-2 py-1 rounded-lg">⌘K</div>
-          </div>
+            <button 
+              type="submit" 
+              disabled={isPulling || !pullCode.trim()}
+              className="bg-[#4B3832] text-white px-3.5 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-[#6F4E37] disabled:opacity-50 transition-colors whitespace-nowrap shadow-xs"
+            >
+              {isPulling ? 'Menarik...' : 'Tarik Pesanan'}
+            </button>
+          </form>
+        </div>
+      </header>
 
-          <CategoryTabs
-            categories={categories}
-            activeCategorySlug={activeCategorySlug}
-            onSelectCategory={setActiveCategorySlug}
-            menuCounts={menuCounts}
-          />
+      {/* ========================================================
+          2. AREA KONTEN UTAMA (Di Bawah Top Bar)
+          ======================================================== */}
+      <div className="flex-1 flex overflow-hidden min-h-0">
+        {/* Kolom Kiri: Notifikasi Banner + Katalog Menu (Scrollable) */}
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Banner Notifikasi Aksi */}
+          {notifMessage && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="bg-emerald-600 text-white font-extrabold px-6 py-2.5 border-b-2 border-emerald-800 shadow-sm flex items-center justify-between z-10 shrink-0"
+            >
+              <span className="flex items-center gap-2 text-sm">
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                <span>{notifMessage}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setNotifMessage('')}
+                className="text-xs font-black uppercase px-2.5 py-1 bg-emerald-800 hover:bg-emerald-900 rounded border border-emerald-700 cursor-pointer transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          )}
 
-          <ProductGrid
-            products={filteredProducts}
-            onAddToCart={handleAddToCart}
-          />
-        </section>
-
-        {/* Kolom Kanan: Panel Keranjang Pesanan (Span 5 / 4) */}
-        <section className="lg:col-span-5 xl:col-span-4 flex flex-col h-full overflow-hidden">
-          <div className="mb-4 shrink-0">
-            <form onSubmit={handlePullOrder} className="flex gap-2">
+          {/* Konten Katalog Menu & Pencarian */}
+          <section className="flex-1 p-4 md:p-5 flex flex-col gap-4 overflow-y-auto min-h-0 custom-scrollbar">
+            {/* Search Bar */}
+            <div className="relative w-full shrink-0">
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6F4E37]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
               <input 
                 type="text" 
-                placeholder="Kode Pesanan (Cth: 1234)" 
-                value={pullCode}
-                onChange={(e) => setPullCode(e.target.value)}
-                className="flex-1 bg-white border-2 border-[#DCC7AA]/40 text-[#4B3832] px-4 py-2 rounded-xl font-medium outline-none focus:outline-none focus:ring-0 focus:border-[#8B7355] transition-all uppercase"
-                maxLength={4}
-                inputMode="numeric"
+                placeholder="Cari Menu..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-[#FFFDF7] border-2 border-[#DCC7AA]/40 text-[#4B3832] pl-12 pr-12 py-2.5 rounded-[2rem] font-medium outline-none focus:border-[#DCC7AA] focus:shadow-sm transition-all text-sm"
               />
-              <button 
-                type="submit" 
-                disabled={isPulling || !pullCode.trim()}
-                className="bg-[#4B3832] text-white px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-[#6F4E37] disabled:opacity-50 transition-colors whitespace-nowrap"
-              >
-                {isPulling ? 'Menarik...' : 'Tarik Pesanan'}
-              </button>
-            </form>
-          </div>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6F4E37]/40 text-xs font-bold border border-[#DCC7AA]/40 px-2 py-0.5 rounded-lg flex items-center gap-0.5">
+                <Command className="w-3 h-3" />
+                <span>K</span>
+              </div>
+            </div>
+
+            <CategoryTabs
+              categories={categories}
+              activeCategorySlug={activeCategorySlug}
+              onSelectCategory={setActiveCategorySlug}
+              menuCounts={menuCounts}
+            />
+
+            <ProductGrid
+              products={filteredProducts}
+              onAddToCart={handleAddToCart}
+            />
+          </section>
+        </main>
+
+        {/* GARIS PEMBATAS TEPI (Vertical Divider dari atas sampai bawah) */}
+        <div className="w-[1px] bg-[#DCC7AA]/60 shrink-0" />
+
+        {/* Kolom Kanan: Card Nota Pesanan (Mulai tepat di bawah garis top bar, full height) */}
+        <aside className="w-full lg:w-[390px] xl:w-[420px] 2xl:w-[450px] shrink-0 p-3 md:p-3.5 flex flex-col h-full overflow-hidden bg-[#FFFDF7]">
           <div className="flex-1 min-h-0">
             <OrderCart
               orderType={orderType}
@@ -692,7 +849,7 @@ export default function POSPage() {
               onClearCart={handleClearCart}
             />
           </div>
-        </section>
+        </aside>
       </div>
 
       {/* 4. Modal Antrean Faktur Gantung */}
@@ -735,6 +892,7 @@ export default function POSPage() {
         onClose={() => setIsTarikReservasiModalOpen(false)}
         onLoadReservation={handleLoadReservation}
       />
+      <OfflineSyncModal />
     </div>
   );
 }

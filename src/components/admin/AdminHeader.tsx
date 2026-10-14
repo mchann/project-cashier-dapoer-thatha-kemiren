@@ -4,6 +4,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ArrowRight } from 'lucide-react';
 
 interface AdminHeaderProps {
   ownerName?: string;
@@ -89,7 +90,8 @@ export function AdminHeader({
           className="inline-flex items-center gap-2 bg-[#78350f] hover:bg-[#451a03] text-[#fefce8] hover:text-white font-bold px-4 py-2.5 rounded-lg border-2 border-[#f59e0b] shadow-sm text-base cursor-pointer transition-colors"
           aria-label="Kembali ke layar operasional Kasir (POS)"
         >
-          <span>Ke Layar Kasir (POS) →</span>
+          <span>Ke Layar Kasir (POS)</span>
+          <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
     </header>

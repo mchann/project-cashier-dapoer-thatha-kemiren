@@ -3,6 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { SmoothScroll } from '@/components/shared/SmoothScroll';
+import { Star } from 'lucide-react';
 
 // Data Mockup untuk Manajemen Foto & Teks (Agar mudah diganti admin nantinya)
 const LANDING_DATA = {
@@ -106,11 +108,12 @@ export default function Home() {
   }, [isDarkMode]);
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 ${
-      isDarkMode 
-        ? 'bg-[#111111] text-[#e5d3b3]' 
-        : 'bg-[#FFFDF7] text-[#4B3832]'
-    }`}>
+    <SmoothScroll>
+      <div className={`min-h-screen transition-colors duration-500 ${
+        isDarkMode 
+          ? 'bg-[#111111] text-[#e5d3b3]' 
+          : 'bg-[#FFFDF7] text-[#4B3832]'
+      }`}>
       
       {/* NAVBAR */}
       <nav className={`fixed w-full z-50 transition-all duration-300 border-b ${
@@ -466,7 +469,7 @@ export default function Home() {
                 <div className="text-2xl mb-4 font-serif">&quot;</div>
                 <div className="flex justify-center gap-1 mb-6">
                   {[...Array(testi.stars)].map((_, i) => (
-                    <span key={i} className="text-sm">★</span>
+                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400 inline" />
                   ))}
                 </div>
                 <p className={`text-sm italic mb-8 leading-relaxed ${
@@ -541,6 +544,7 @@ export default function Home() {
         </div>
       </footer>
       
-    </div>
+      </div>
+    </SmoothScroll>
   );
 }
